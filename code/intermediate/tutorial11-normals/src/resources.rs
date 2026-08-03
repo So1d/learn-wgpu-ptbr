@@ -114,7 +114,7 @@ pub async fn load_model(
                         m.mesh.normals[i * 3 + 1],
                         m.mesh.normals[i * 3 + 2],
                     ],
-                    // We'll calculate these later
+                    // Calcularemos estes mais tarde
                     tangent: [0.0; 3],
                     bitangent: [0.0; 3],
                 })
@@ -123,9 +123,9 @@ pub async fn load_model(
             let indices = &m.mesh.indices;
             let mut triangles_included = vec![0; vertices.len()];
 
-            // Calculate tangents and bitangets. We're going to
-            // use the triangles, so we need to loop through the
-            // indices in chunks of 3
+            // Calcula tangentes e bitangentes. Vamos usar os
+            // triângulos, portanto precisamos percorrer os
+            // índices em blocos de 3
             for c in indices.chunks(3) {
                 let v0 = vertices[c[0] as usize];
                 let v1 = vertices[c[1] as usize];
@@ -139,28 +139,28 @@ pub async fn load_model(
                 let uv1: cgmath::Vector2<_> = v1.tex_coords.into();
                 let uv2: cgmath::Vector2<_> = v2.tex_coords.into();
 
-                // Calculate the edges of the triangle
+                // Calcula as arestas do triângulo
                 let delta_pos1 = pos1 - pos0;
                 let delta_pos2 = pos2 - pos0;
 
-                // This will give us a direction to calculate the
-                // tangent and bitangent
+                // Isso nos dará uma direção para calcular a
+                // tangente e a bitangente
                 let delta_uv1 = uv1 - uv0;
                 let delta_uv2 = uv2 - uv0;
 
-                // Solving the following system of equations will
-                // give us the tangent and bitangent.
+                // Resolver o seguinte sistema de equações nos
+                // dará a tangente e a bitangente.
                 //     delta_pos1 = delta_uv1.x * T + delta_u.y * B
                 //     delta_pos2 = delta_uv2.x * T + delta_uv2.y * B
-                // Luckily, the place I found this equation provided
-                // the solution!
+                // Felizmente, o local onde encontrei essa equação forneceu
+                // a solução!
                 let r = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
                 let tangent = (delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r;
-                // We flip the bitangent to enable right-handed normal
-                // maps with wgpu texture coordinate system
+                // Invertemos a bitangente para permitir normal maps
+                // para a mão direita (right-handed) no sistema de coordenadas de textura do wgpu
                 let bitangent = (delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * -r;
 
-                // We'll use the same tangent/bitangent for each vertex in the triangle
+                // Usaremos a mesma tangente/bitangente para cada vértice do triângulo
                 vertices[c[0] as usize].tangent =
                     (tangent + cgmath::Vector3::from(vertices[c[0] as usize].tangent)).into();
                 vertices[c[1] as usize].tangent =
@@ -174,13 +174,13 @@ pub async fn load_model(
                 vertices[c[2] as usize].bitangent =
                     (bitangent + cgmath::Vector3::from(vertices[c[2] as usize].bitangent)).into();
 
-                // Used to average the tangents/bitangents
+                // Usado para tirar a média das tangentes/bitangentes
                 triangles_included[c[0] as usize] += 1;
                 triangles_included[c[1] as usize] += 1;
                 triangles_included[c[2] as usize] += 1;
             }
 
-            // Average the tangents/bitangents
+            // Tira a média das tangentes/bitangentes
             for (i, n) in triangles_included.into_iter().enumerate() {
                 let denom = 1.0 / n as f32;
                 let v = &mut vertices[i];

@@ -60,8 +60,8 @@ pub async fn run() -> anyhow::Result<()> {
     let mut encoder = device.create_command_encoder(&Default::default());
 
     {
-        // We specified 64 threads per workgroup in the shader, so we need to compute how many
-        // workgroups we need to dispatch.
+        // Especificamos 64 threads por workgroup no shader, então precisamos calcular quantos
+        // workgroups precisamos despachar.
         let num_dispatches = input_data.len().div_ceil(64) as u32;
 
         let mut pass = encoder.begin_compute_pass(&Default::default());
@@ -75,30 +75,30 @@ pub async fn run() -> anyhow::Result<()> {
     queue.submit([encoder.finish()]);
 
     {
-        // The mapping process is async, so we'll need to create a channel to get
-        // the success flag for our mapping
+        // O processo de mapeamento é assíncrono, então precisaremos criar um canal para obter
+        // a flag de sucesso do nosso mapeamento
         let (tx, rx) = bounded(1);
 
-        // We send the success or failure of our mapping via a callback
+        // Enviamos o sucesso ou falha do nosso mapeamento via callback
         temp_buffer.map_async(wgpu::MapMode::Read, .., move |result| {
             tx.send(result).unwrap()
         });
 
-        // The callback we submitted to map async will only get called after the
-        // device is polled or the queue submitted
+        // O callback que enviamos para map_async só será chamado após o
+        // device ser consultado (poll) ou a queue ser enviada
         device.poll(wgpu::PollType::wait_indefinitely())?;
 
-        // We check if the mapping was successful here
+        // Verificamos aqui se o mapeamento foi bem-sucedido
         rx.recv_async().await??;
 
-        // We then get the bytes that were stored in the buffer
+        // Em seguida, obtemos os bytes que estavam armazenados no buffer
         let output_data = temp_buffer.get_mapped_range(..)?;
 
-        // Now we have the data on the CPU we can do what ever we want to with it
+        // Agora que temos os dados na CPU, podemos fazer o que quisermos com eles
         assert_eq!(&input_data, bytemuck::cast_slice(&output_data));
     }
 
-    // We need to unmap the buffer to be able to use it again
+    // Precisamos desmapear o buffer para poder usá-lo novamente
     temp_buffer.unmap();
 
     log::info!("Success!");

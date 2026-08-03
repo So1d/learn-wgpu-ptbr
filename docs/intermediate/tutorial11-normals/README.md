@@ -1,27 +1,27 @@
-# Normal Mapping
+# Mapeamento de Normais (Normal Mapping)
 
-With just lighting, our scene is already looking pretty good. Still, our models are still overly smooth. This is understandable because we are using a very simple model. If we were using a texture that was supposed to be smooth, this wouldn't be a problem, but our brick texture is supposed to be rougher. We could solve this by adding more geometry, but that would slow our scene down, and it would be hard to know where to add new polygons. This is where normal mapping comes in.
+Apenas com a iluminação, nossa cena já está com um aspecto muito bom. No entanto, nossos modelos ainda parecem excessivamente lisos. Isso é compreensível porque estamos usando um modelo 3D muito simples. Se estivéssemos usando uma textura que deveria ser lisa, isso não seria um problema, mas nossa textura de tijolos deveria ser mais rústica e áspera. Poderíamos resolver isso adicionando mais geometria, mas isso desaceleraria nossa cena e seria difícil saber onde adicionar novos polígonos. É aqui que entra o mapeamento de normais (normal mapping).
 
-Remember when we experimented with storing instance data in a texture in [the instancing tutorial](/beginner/tutorial7-instancing/#a-different-way-textures)? A normal map is doing just that with normal data! We'll use the normals in the normal map in our lighting calculation in addition to the vertex normal.
+Lembra de quando experimentamos armazenar dados de instâncias em uma textura no [tutorial de instanciamento](/beginner/tutorial7-instancing/#uma-forma-diferente-texturas)? Um normal map faz exatamente isso com dados de normais! Usaremos as normais contidas no normal map em nosso cálculo de iluminação além da normal do vértice.
 
-The brick texture I found came with a normal map. Let's take a look at it!
+A textura de tijolos que encontrei veio com um normal map. Vamos dar uma olhada nele!
 
 ![./cube-normal.png](./cube-normal.png)
 
-The r, g, and b components of the texture correspond to the x, y, and z components or the normals. All the z values should be positive. That's why the normal map has a bluish tint.
+Os componentes r, g e b da textura correspondem aos componentes x, y e z das normais. Todos os valores z devem ser positivos. É por isso que o normal map tem uma tonalidade azulada.
 
-We'll need to modify our `Material` struct in `model.rs` to include a `normal_texture`.
+Precisaremos modificar nossa struct `Material` em `model.rs` para incluir uma `normal_texture`.
 
 ```rust
 pub struct Material {
     pub name: String,
     pub diffuse_texture: texture::Texture,
-    pub normal_texture: texture::Texture, // UPDATED!
+    pub normal_texture: texture::Texture, // ATUALIZADO!
     pub bind_group: wgpu::BindGroup,
 }
 ```
 
-We'll have to update the `texture_bind_group_layout` to include the normal map as well.
+Teremos que atualizar o `texture_bind_group_layout` para incluir o normal map também.
 
 ```rust
 let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -49,27 +49,27 @@ let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroup
 });
 ```
 
-We'll need to load the normal map. We'll do this in the loop where we create the materials in the `load_model()` function in `resources.rs`.
+Precisaremos carregar o normal map. Faremos isso no loop onde criamos os materiais na função `load_model()` em `resources.rs`.
 
 ```rust
 // resources.rs
 let mut materials = Vec::new();
 for m in obj_materials? {
     let diffuse_texture = load_texture(&m.diffuse_texture, device, queue).await?;
-    // NEW!
+    // NOVO!
     let normal_texture = load_texture(&m.normal_texture, device, queue).await?;
 
     materials.push(model::Material::new(
         device,
         &m.name,
         diffuse_texture,
-        normal_texture, // NEW!
+        normal_texture, // NOVO!
         layout,
     ));
 }
 ```
 
-You'll notice I'm using a `Material::new()` function we didn't have previously. Here's the code for that:
+Você notará que estou usando uma função `Material::new()` que não tínhamos anteriormente. Aqui está o código para ela:
 
 ```rust
 impl Material {
@@ -77,7 +77,7 @@ impl Material {
         device: &wgpu::Device,
         name: &str,
         diffuse_texture: texture::Texture,
-        normal_texture: texture::Texture, // NEW!
+        normal_texture: texture::Texture, // NOVO!
         layout: &wgpu::BindGroupLayout,
     ) -> Self {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -91,7 +91,7 @@ impl Material {
                     binding: 1,
                     resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
                 },
-                // NEW!
+                // NOVO!
                 wgpu::BindGroupEntry {
                     binding: 2,
                     resource: wgpu::BindingResource::TextureView(&normal_texture.view),
@@ -107,14 +107,14 @@ impl Material {
         Self {
             name: String::from(name),
             diffuse_texture,
-            normal_texture, // NEW!
+            normal_texture, // NOVO!
             bind_group,
         }
     }
 }
 ```
 
-Now, we can use the texture in the fragment shader.
+Agora, podemos usar a textura no fragment shader.
 
 ```wgsl
 // Fragment shader
@@ -133,11 +133,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let object_color: vec4<f32> = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let object_normal: vec4<f32> = textureSample(t_normal, s_normal, in.tex_coords);
     
-    // We don't need (or want) much ambient light, so 0.1 is fine
+    // Não precisamos (nem queremos) muita luz ambiente, então 0.1 está ótimo
     let ambient_strength = 0.1;
     let ambient_color = light.color * ambient_strength;
 
-    // Create the lighting vectors
+    // Cria os vetores de iluminação
     let tangent_normal = object_normal.xyz * 2.0 - 1.0;
     let light_dir = normalize(light.position - in.world_position);
     let view_dir = normalize(camera.view_pos.xyz - in.world_position);
@@ -155,40 +155,40 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 ```
 
-If we run the code now, you'll notice things don't look quite right. Let's compare our results with the last tutorial.
+Se executarmos o código agora, você notará que as coisas não parecem muito certas. Vamos comparar nossos resultados com o último tutorial.
 
 ![](./normal_mapping_wrong.png)
 ![](./ambient_diffuse_specular_lighting.png)
 
-Parts of the scene are dark when they should be lit up, and vice versa.
+Partes da cena estão escuras quando deveriam estar iluminadas, e vice-versa.
 
-## Tangent Space to World Space
+## Espaço Tangente para Espaço do Mundo (Tangent Space to World Space)
 
-I mentioned briefly in the [lighting tutorial](/intermediate/tutorial10-lighting/#the-normal-matrix) that we were doing our lighting calculation in "world space". This meant that the entire scene was oriented with respect to the *world's* coordinate system. When we pull the normal data from our normal texture, all the normals are in what's known as pointing roughly in the positive z direction. That means that our lighting calculation thinks all of the surfaces of our models are facing in roughly the same direction. This is referred to as `tangent space`.
+Mencionei brevemente no [tutorial de iluminação](/intermediate/tutorial10-lighting/#the-normal-matrix) que estávamos fazendo nosso cálculo de iluminação no "espaço do mundo" (world space). Isso significava que toda a cena estava orientada em relação ao sistema de coordenadas do *mundo*. Quando extraímos os dados de normais da nossa textura de normais, todas as normais estão no que é conhecido como apontando aproximadamente na direção z positiva. Isso significa que nosso cálculo de iluminação pensa que todas as superfícies dos nossos modelos estão voltadas para a mesma direção. Isso é chamado de `espaço tangente` (tangent space).
 
-If we remember the [lighting-tutorial](/intermediate/tutorial10-lighting/#), we used the vertex normal to indicate the direction of the surface. It turns out we can use that to transform our normals from `tangent space` into `world space`. In order to do that, we need to draw from the depths of linear algebra.
+Se nos lembrarmos do [tutorial de iluminação](/intermediate/tutorial10-lighting/#), usamos a normal do vértice para indicar a direção da superfície. Acontece que podemos usar isso para transformar nossas normais do `espaço tangente` para o `espaço do mundo`. Para fazer isso, precisamos recorrer à álgebra linear.
 
-We can create a matrix that represents a coordinate system using three vectors that are perpendicular (or orthonormal) to each other. Basically, we define the x, y, and z axes of our coordinate system.
+Podemos criar uma matriz que representa um sistema de coordenadas usando três vetores que são perpendiculares (ou ortonormais) entre si. Basicamente, definimos os eixos x, y e z do nosso sistema de coordenadas.
 
 ```wgsl
 let coordinate_system = mat3x3<f32>(
-    vec3(1, 0, 0), // x-axis (right)
-    vec3(0, 1, 0), // y-axis (up)
-    vec3(0, 0, 1)  // z-axis (forward)
+    vec3(1, 0, 0), // eixo x (direita / right)
+    vec3(0, 1, 0), // eixo y (cima / up)
+    vec3(0, 0, 1)  // eixo z (frente / forward)
 );
 ```
 
-We're going to create a matrix that will represent the coordinate space relative to our vertex normals. We're then going to use that to transform our normal map data to be in world space.
+Vamos criar uma matriz que representará o espaço de coordenadas relativo às normais dos nossos vértices. Em seguida, usaremos essa matriz para transformar os dados do nosso normal map para ficarem no espaço do mundo.
 
-## The tangent and the bitangent
+## A tangente e a bitangente
 
-We have one of the three vectors we need, the normal. What about the others? These are the tangent and bitangent vectors. A tangent represents any vector parallel with a surface (aka. doesn't intersect with it). The tangent is always perpendicular to the normal vector. The bitangent is a tangent vector that is perpendicular to the other tangent vector. Together, the tangent, bitangent, and normal represent the x, y, and z axes, respectively.
+Temos um dos três vetores de que precisamos: a normal. E quanto aos outros? Estes são os vetores tangente e bitangente. Uma tangente representa qualquer vetor paralelo a uma superfície (ou seja, que não a intersecta). A tangente é sempre perpendicular ao vetor normal. A bitangente é um vetor tangente perpendicular ao outro vetor tangente. Juntos, a tangente, a bitangente e a normal representam os eixos x, y e z, respectivamente.
 
-Some model formats include the tangent and bitangent (sometimes called the binormal) in the vertex data, but OBJ does not. We'll have to calculate them manually. Luckily, we can derive our tangent and bitangent from our existing vertex data. Take a look at the following diagram.
+Alguns formatos de modelo 3D incluem a tangente e a bitangente (às vezes chamada de binormal) nos dados de vértices, mas o formato OBJ não inclui. Teremos que calculá-las manualmente. Felizmente, podemos derivar nossa tangente e bitangente a partir dos nossos dados de vértices existentes. Observe o diagrama a seguir.
 
 ![](./tangent_space.png)
 
-Basically, we can use the edges of our triangles and our normal to calculate the tangent and bitangent. But first, we need to update our `ModelVertex` struct in `model.rs`.
+Basicamente, podemos usar as arestas dos nossos triângulos e nossa normal para calcular a tangente e a bitangente. Mas primeiro, precisamos atualizar nossa struct `ModelVertex` em `model.rs`.
 
 ```rust
 #[repr(C)]
@@ -197,13 +197,13 @@ pub struct ModelVertex {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],
     pub normal: [f32; 3],
-    // NEW!
+    // NOVO!
     pub tangent: [f32; 3],
     pub bitangent: [f32; 3],
 }
 ```
 
-We'll need to upgrade our `VertexBufferLayout` as well.
+Precisaremos atualizar nosso `VertexBufferLayout` também.
 
 ```rust
 impl Vertex for ModelVertex {
@@ -215,7 +215,7 @@ impl Vertex for ModelVertex {
             attributes: &[
                 // ...
 
-                // Tangent and bitangent
+                // Tangente e bitangente
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
                     shader_location: 3,
@@ -232,7 +232,7 @@ impl Vertex for ModelVertex {
 }
 ```
 
-Now, we can calculate the new tangent and bitangent vectors. Update the mesh generation in `load_model()` in `resource.rs` to use the following code:
+Agora, podemos calcular os novos vetores tangente e bitangente. Atualize a geração de malhas em `load_model()` em `resources.rs` para usar o seguinte código:
 
 ```rust
 let meshes = models
@@ -251,7 +251,7 @@ let meshes = models
                     m.mesh.normals[i * 3 + 1],
                     m.mesh.normals[i * 3 + 2],
                 ],
-                // We'll calculate these later
+                // Calcularemos estes mais tarde
                 tangent: [0.0; 3],
                 bitangent: [0.0; 3],
             })
@@ -260,9 +260,9 @@ let meshes = models
         let indices = &m.mesh.indices;
         let mut triangles_included = vec![0; vertices.len()];
 
-        // Calculate tangents and bitangets. We're going to
-        // use the triangles, so we need to loop through the
-        // indices in chunks of 3
+        // Calcula tangentes e bitangentes. Vamos usar os
+        // triângulos, portanto precisamos percorrer os
+        // índices em blocos de 3
         for c in indices.chunks(3) {
             let v0 = vertices[c[0] as usize];
             let v1 = vertices[c[1] as usize];
@@ -276,28 +276,28 @@ let meshes = models
             let uv1: cgmath::Vector2<_> = v1.tex_coords.into();
             let uv2: cgmath::Vector2<_> = v2.tex_coords.into();
 
-            // Calculate the edges of the triangle
+            // Calcula as arestas do triângulo
             let delta_pos1 = pos1 - pos0;
             let delta_pos2 = pos2 - pos0;
 
-            // This will give us a direction to calculate the
-            // tangent and bitangent
+            // Isso nos dará uma direção para calcular a
+            // tangente e a bitangente
             let delta_uv1 = uv1 - uv0;
             let delta_uv2 = uv2 - uv0;
 
-            // Solving the following system of equations will
-            // give us the tangent and bitangent.
+            // Resolver o seguinte sistema de equações nos
+            // dará a tangente e a bitangente.
             //     delta_pos1 = delta_uv1.x * T + delta_u.y * B
             //     delta_pos2 = delta_uv2.x * T + delta_uv2.y * B
-            // Luckily, the place I found this equation provided
-            // the solution!
+            // Felizmente, o local onde encontrei essa equação forneceu
+            // a solução!
             let r = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
             let tangent = (delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r;
-            // We flip the bitangent to enable right-handed normal
-            // maps with wgpu texture coordinate system
+            // Invertemos a bitangente para permitir normal maps
+            // para a mão direita (right-handed) no sistema de coordenadas de textura do wgpu
             let bitangent = (delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * -r;
 
-            // We'll use the same tangent/bitangent for each vertex in the triangle
+            // Usaremos a mesma tangente/bitangente para cada vértice do triângulo
             vertices[c[0] as usize].tangent =
                 (tangent + cgmath::Vector3::from(vertices[c[0] as usize].tangent)).into();
             vertices[c[1] as usize].tangent =
@@ -311,13 +311,13 @@ let meshes = models
             vertices[c[2] as usize].bitangent =
                 (bitangent + cgmath::Vector3::from(vertices[c[2] as usize].bitangent)).into();
 
-            // Used to average the tangents/bitangents
+            // Usado para tirar a média das tangentes/bitangentes
             triangles_included[c[0] as usize] += 1;
             triangles_included[c[1] as usize] += 1;
             triangles_included[c[2] as usize] += 1;
         }
 
-        // Average the tangents/bitangents
+        // Tira a média das tangentes/bitangentes
         for (i, n) in triangles_included.into_iter().enumerate() {
             let denom = 1.0 / n as f32;
             let mut v = &mut vertices[i];
@@ -347,9 +347,9 @@ let meshes = models
     .collect::<Vec<_>>();
 ```
 
-## World Space to Tangent Space
+## Espaço do Mundo para Espaço Tangente (World Space to Tangent Space)
 
-Since the normal map, by default, is in tangent space, we need to transform all the other variables used in that calculation to tangent space as well. We'll need to construct the tangent matrix in the vertex shader. First, we need our `VertexInput` to include the tangent and bitangents we calculated earlier.
+Como o normal map, por padrão, está no espaço tangente, precisamos transformar todas as outras variáveis usadas nesse cálculo para o espaço tangente também. Precisaremos construir a matriz tangente no vertex shader. Primeiro, precisamos que nossa `VertexInput` inclua a tangente e as bitangentes que calculamos anteriormente.
 
 ```wgsl
 struct VertexInput {
@@ -361,13 +361,13 @@ struct VertexInput {
 };
 ```
 
-Next, we'll construct the `tangent_matrix` and then transform the vertex's light and view position into tangent space.
+Em seguida, construiremos a `tangent_matrix` e depois transformaremos a luz do vértice e a posição de visão (view position) para o espaço tangente.
 
 ```wgsl
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>,
-    // UPDATED!
+    // ATUALIZADO!
     @location(1) tangent_position: vec3<f32>,
     @location(2) tangent_light_position: vec3<f32>,
     @location(3) tangent_view_position: vec3<f32>,
@@ -385,7 +385,7 @@ fn vs_main(
         instance.normal_matrix_2,
     );
 
-    // Construct the tangent matrix
+    // Constrói a matriz tangente
     let world_normal = normalize(normal_matrix * model.normal);
     let world_tangent = normalize(normal_matrix * model.tangent);
     let world_bitangent = normalize(normal_matrix * model.bitangent);
@@ -407,35 +407,35 @@ fn vs_main(
 }
 ```
 
-Finally, we'll update the fragment shader to use these transformed lighting values.
+Finalmente, atualizaremos o fragment shader para usar esses valores de iluminação transformados.
 
 ```wgsl
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Sample textures..
+    // Amostra as texturas..
 
-    // Create the lighting vectors
+    // Cria os vetores de iluminação
     let tangent_normal = object_normal.xyz * 2.0 - 1.0;
     let light_dir = normalize(in.tangent_light_position - in.tangent_position);
     let view_dir = normalize(in.tangent_view_position - in.tangent_position);
 
-    // Perform lighting calculations...
+    // Realiza cálculos de iluminação...
 }
 ```
 
-We get the following from this calculation.
+Obtemos o seguinte com esse cálculo.
 
 ![](./normal_mapping_correct.png)
 
-## Srgb and normal textures
+## Srgb e Texturas de Normais
 
-We've been using `Rgba8UnormSrgb` for all our textures. Srgb is a non-linear color space. It is ideal for monitors because human color perception isn't linear either and Srgb was designed to match the quirkiness of our human color perception.
+Temos usado `Rgba8UnormSrgb` para todas as nossas texturas. Srgb é um espaço de cores não linear. É ideal para monitores porque a percepção de cores humana também não é linear, e o Srgb foi projetado para corresponder às peculiaridades da percepção humana de cores.
 
-But Srgb is an inappropriate color space for data that must be operated on mathematically. Such data should be in a linear (not gamma-corrected) color space. When a GPU samples a texture with Srgb in the name, it converts the data from non-linear gamma-corrected Srgb to a linear non-gamma-corrected color space first so that you can do math on it (and it does the opposite conversion if you write back to a Srgb texture).
+Mas o Srgb é um espaço de cores inadequado para dados que devem ser operados matematicamente. Tais dados devem estar em um espaço de cores linear (sem correção de gama). Quando uma GPU amostra uma textura com Srgb no nome, ela converte os dados do Srgb não linear com correção de gama para um espaço de cores linear sem correção de gama primeiro, para que você possa fazer matemática com eles (e faz a conversão oposta se você escrever de volta para uma textura Srgb).
 
-Normal maps are already stored in a linear format. So we should be specifying the linear space for the texture so it doesn't do an inappropriate conversion when we read from it.
+Normal maps já são armazenados em um formato linear. Portanto, devemos especificar o espaço linear para a textura, para que ela não faça uma conversão inadequada quando lermos dela.
 
-We need to specify `Rgba8Unorm` when we create the texture. Let's add an `is_normal_map` method to our Texture struct.
+Precisamos especificar `Rgba8Unorm` quando criamos a textura. Vamos adicionar o parâmetro `is_normal_map` ao método da nossa struct Texture.
 
 ```rust
 pub fn from_image(
@@ -443,10 +443,10 @@ pub fn from_image(
     queue: &wgpu::Queue,
     img: &image::DynamicImage,
     label: Option<&str>,
-    is_normal_map: bool, // NEW!
+    is_normal_map: bool, // NOVO!
 ) -> Result<Self> {
     // ...
-    // NEW!
+    // NOVO!
     let format = if is_normal_map {
         wgpu::TextureFormat::Rgba8Unorm
     } else {
@@ -458,7 +458,7 @@ pub fn from_image(
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        // UPDATED!
+        // ATUALIZADO!
         format,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         view_formats: &[],
@@ -474,7 +474,7 @@ pub fn from_image(
 }
 ```
 
-We'll need to propagate this change to the other methods that use this.
+Precisaremos propagar essa alteração para os outros métodos que usam essa função.
 
 ```rust
 pub fn from_bytes(
@@ -482,14 +482,14 @@ pub fn from_bytes(
     queue: &wgpu::Queue,
     bytes: &[u8],
     label: &str,
-    is_normal_map: bool, // NEW!
+    is_normal_map: bool, // NOVO!
 ) -> Result<Self> {
     let img = image::load_from_memory(bytes)?;
-    Self::from_image(device, queue, &img, Some(label), is_normal_map) // UPDATED!
+    Self::from_image(device, queue, &img, Some(label), is_normal_map) // ATUALIZADO!
 }
 ```
 
-We need to update `resource.rs` as well.
+Precisamos atualizar o `resources.rs` também.
 
 ```rust
 pub async fn load_texture(
@@ -512,8 +512,8 @@ pub async fn load_model(
 
     let mut materials = Vec::new();
     for m in obj_materials? {
-        let diffuse_texture = load_texture(&m.diffuse_texture, false, device, queue).await?; // UDPATED!
-        let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?; // UPDATED!
+        let diffuse_texture = load_texture(&m.diffuse_texture, false, device, queue).await?; // ATUALIZADO!
+        let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?; // ATUALIZADO!
 
         materials.push(model::Material::new(
             device,
@@ -527,13 +527,13 @@ pub async fn load_model(
 
 ```
 
-That gives us the following.
+Isso nos dá o seguinte resultado.
 
 ![](./no_srgb.png)
 
-## Unrelated stuff
+## Recursos adicionais
 
-I wanted to mess around with other materials so I added a `draw_model_instanced_with_material()` to the `DrawModel` trait.
+Eu queria experimentar outros materiais, então adicionei um `draw_model_instanced_with_material()` à trait `DrawModel`.
 
 ```rust
 pub trait DrawModel<'a> {
@@ -568,7 +568,7 @@ where
 }
 ```
 
-I found a cobblestone texture with a matching normal map and created a `debug_material` for that.
+Encontrei uma textura de paralelepípedo (cobblestone) com um normal map correspondente e criei um `debug_material` para ela.
 
 ```rust
 // lib.rs
@@ -593,7 +593,7 @@ impl State {
 }
 ```
 
-Then, to render with the `debug_material`, I used the `draw_model_instanced_with_material()` that I created.
+Então, para renderizar com o `debug_material`, usei o `draw_model_instanced_with_material()` que criei.
 
 ```rust
 render_pass.set_pipeline(&self.render_pipeline);
@@ -606,13 +606,13 @@ render_pass.draw_model_instanced_with_material(
 );
 ```
 
-That gives us something like this.
+Isso nos dá algo assim.
 
 ![](./debug_material.png)
 
-You can find the textures I use in the GitHub Repository.
+Você pode encontrar as texturas que uso no Repositório do GitHub.
 
-## Demo
+## Demonstração
 
 <WasmExample example="tutorial11_normals"></WasmExample>
 

@@ -1,93 +1,72 @@
-# Sorting on the GPU
+# Ordenação (Sorting) na GPU
 
-Dealing with sorted data make most algorithms easier to work with, so
-it makes sense that we would want to be able to sort our GPU data on
-the GPU. We have to rethink how we approach sorting as the way we do it
-as traditional sorting algorithms aren't designed with parallel computing
-power in mind. Fortunately there are some algorithms out there that do
-work well with the GPU!
+Lidar com dados ordenados facilita a elaboração da maioria dos algoritmos, portanto faz sentido querer ordenar nossos dados diretamente na GPU. Precisamos repensar a forma como abordamos a ordenação, pois os algoritmos tradicionais de ordenação não foram projetados tendo em mente o poder computacional paralelo. Felizmente, existem alguns algoritmos que funcionam muito bem na GPU!
 
-## Odd-Even Sort (aka. Brick Sort)
+## Odd-Even Sort (ou Brick Sort)
 
-This sort works by iterating over pairs of items, comparing them, and
-swapping them if one is greater than the other. Consider the following
-array:
+Esta ordenação (par-ímpar) funciona iterando sobre pares de itens, comparando-os e trocando-os de posição se um for maior que o outro. Considere o seguinte array:
 
 ```rust
 [3, 7, 1, 5, 0, 4, 2, 6]
 ```
 
-First we do the odd pass. This means that we consider pairs of items from
-index 1 (not 0) up. So for the above data, the pairs would be the following.
+Primeiro fazemos o passo ímpar (odd pass). Isso significa que consideramos pares de itens a partir do índice 1 (não 0). Para os dados acima, os pares seriam:
 
 ```rust
 [[7, 1], [5, 0], [4, 2]]
 ```
 
-We skip the first and last term as those are don't have another number
-next to them that isn't already paired up. We then swap the higher number
-with the lower number meaning our data looks as follows:
+Pulamos o primeiro e o último elemento, pois eles não possuem outro número adjacente que não esteja já pareado. Então trocamos o número maior com o número menor, o que resulta no seguinte estado dos dados:
 
 ```rust
 [3, 1, 7, 0, 5, 2, 4]
 ```
 
-Next is the even pass. This the same as the odd pass, but we start at index
-0 instead of 1. This gives us the following pairs.
+Em seguida, vem o passo par (even pass). É idêntico ao passo ímpar, mas começamos no índice 0 em vez de 1. Isso nos dá os seguintes pares:
 
 ```rust
 [[3, 1], [7, 0], [2, 4]]
 ```
 
-Which when swap yields the following:
+Que, ao trocar os elementos fora de ordem, resulta em:
 
 ```rust
 [1, 3, 0, 7, 2, 4]
 ```
 
-This process repeats until the array is sorted. Here's the data at each
-iteration after this:
+Esse processo se repete até que o array esteja completamente ordenado. Aqui estão os dados em cada iteração subsequente:
 
 ```rust
-[1, 0, 3, 2, 7, 4] // odd
-[0, 1, 2, 3, 4, 7] // even
+[1, 0, 3, 2, 7, 4] // ímpar (odd)
+[0, 1, 2, 3, 4, 7] // par (even)
 ```
 
-## When do we stop sorting?
+## Quando paramos a ordenação?
 
-Most sorting algorithms don't manually check that the array is sorted
-after each iteration. Fortunately [research shows](https://en.wikipedia.org/wiki/Odd%E2%80%93even_sort#cite_note-6)
-that the max number of iterations to complete this algorithm is the
-same as the number of items, ie N. This means that given an array of
-size `N = 8`
+A maioria dos algoritmos de ordenação não verifica manualmente se o array está ordenado a cada iteração. Felizmente, [pesquisas mostram](https://en.wikipedia.org/wiki/Odd%E2%80%93even_sort#cite_note-6) que o número máximo de iterações para concluir este algoritmo é igual ao número de itens, isto é, N. Isso significa que, para um array de tamanho `N = 8`:
 
 ```rust
 [7, 6, 5, 4, 3, 2, 1, 0]
 ```
 
-It will take 8 passes to sort this data.
+Levará 8 passos para ordenar esses dados.
 
 ```rust
-[7, 5, 6, 3, 4, 1, 2, 0] // odd
-[5, 7, 3, 6, 1, 4, 0, 2] // even
-[5, 3, 7, 1, 6, 0, 4, 2] // odd
-[3, 5, 1, 7, 0, 6, 2, 4] // even
-[3, 1, 5, 0, 7, 2, 6, 4] // odd
-[1, 3, 0, 5, 2, 7, 4, 6] // even
-[1, 0, 3, 2, 5, 4, 7, 6] // odd
-[0, 1, 2, 3, 4, 5, 6, 7] // even
+[7, 5, 6, 3, 4, 1, 2, 0] // ímpar (odd)
+[5, 7, 3, 6, 1, 4, 0, 2] // par (even)
+[5, 3, 7, 1, 6, 0, 4, 2] // ímpar (odd)
+[3, 5, 1, 7, 0, 6, 2, 4] // par (even)
+[3, 1, 5, 0, 7, 2, 6, 4] // ímpar (odd)
+[1, 3, 0, 5, 2, 7, 4, 6] // par (even)
+[1, 0, 3, 2, 5, 4, 7, 6] // ímpar (odd)
+[0, 1, 2, 3, 4, 5, 6, 7] // par (even)
 ```
 
-This will always work, regardless of the data we are sorting. It's a
-little inefficient when your data is almost sorted, so you'll want to
-keep that in mind.
+Isso sempre funcionará, independentemente dos dados que estamos ordenando. É um pouco ineficiente quando os dados já estão quase ordenados, por isso é bom manter esse ponto em mente.
 
-## Porting odd-even sort to WGSL
+## Portando Odd-Even Sort para WGSL
 
-The odd-even sort is special as each pass is trivial to parallelize.
-Each pair of items is considered independantly of all the other items.
-That means that we can dedicate a single thread to every pair we want
-to compare. Let's jump into the shader!
+O Odd-Even sort é especial porque cada passo é trivial de paralelizar. Cada par de itens é considerado de forma independente de todos os outros itens. Isso significa que podemos dedicar uma única thread para cada par que desejamos comparar. Vamos direto ao shader!
 
 ```wgsl
 @group(0)
@@ -104,21 +83,17 @@ fn odd_even_sort(
 }
 ```
 
-This works much the same as with the introduction code. We setup our bindgroup
-with one `array<u32>` that is `read_write` as this sort works without needing
-an additional array to output into. We also only need the `global_invocation_id`
-builtin to properly index our `data`. No we'll start looking at the code inside
-of `odd_even_sort`.
+Isso funciona de maneira muito parecida com o código de introdução. Configuramos nosso bind group com um `array<u32>` do tipo `read_write`, já que esta ordenação funciona sem a necessidade de um array adicional para saída. Também precisamos apenas da builtin `global_invocation_id` para indexar adequadamente nossos `data`. Agora examinaremos o código dentro de `odd_even_sort`.
 
 ```wgsl
     let num_items = arrayLength(&data);
     let pair_index = gid.x;
 ```
 
-First we get the index of the pair the current thread is working on.
+Primeiro, obtemos o índice do par no qual a thread atual está trabalhando.
 
 ```wgsl
-    // odd
+    // ímpar (odd)
     var a = pair_index * 2u + 1;
     var b = a + 1u;
 
@@ -129,12 +104,10 @@ First we get the index of the pair the current thread is working on.
     }
 ```
 
-For this part of the code, first we get the indices of the items we want to compare.
-If the indices are in bounds and the values are out of order, swap the values. We can
-do the even pass as well so that we can halve the number of times we call this shader.
+Para esta parte do código, primeiro obtemos os índices dos itens que queremos comparar. Se os índices estiverem dentro dos limites e os valores estiverem fora de ordem, trocamos os valores. Podemos incluir o passo par também para que possamos reduzir pela metade o número de vezes que chamamos este shader.
 
 ```wgsl
-    // even
+    // par (even)
     a = pair_index * 2u;
     b = a + 1u;
 
@@ -145,48 +118,31 @@ do the even pass as well so that we can halve the number of times we call this s
     }
 ```
 
-It seems like we're done with the shader code, but there's technically
-an error in our code. It's nothing with the logic of our code, it has
-to do with the nature of parallel coding in general: race conditions.
+Parece que terminamos o código do shader, mas tecnicamente existe um erro no nosso código. Não tem a ver com a lógica do nosso algoritmo, mas sim com a natureza da programação paralela em geral: condições de corrida (race conditions).
 
-## Race conditions and barriers
+## Condições de corrida (Race conditions) e barreiras (barriers)
 
-![example of race conditions featuring puppies](./race-condition-puppies.jpg)
+![exemplo de race conditions ilustrado por filhotes](./race-condition-puppies.jpg)
 
-A race condition occurs when two or more threads try to opperate on the
-same location in memory. If we did one step for each call to the shader,
-we would be fine, but since we do two passes, we need to make sure that
-the threads aren't tripping over each other. We do this using barriers.
+Uma condição de corrida (race condition) ocorre quando duas ou mais threads tentam operar sobre a mesma posição de memória. Se fizéssemos um passo para cada chamada ao shader, estaríamos seguros, mas como fazemos dois passos na mesma execução, precisamos garantir que as threads não interfiram umas nas outras. Fazemos isso usando barreiras (barriers).
 
-A barrier causes the current thread to wait for other threads to finish
-before continuing. There are two types of barrier.
+Uma barreira faz com que a thread atual aguarde a conclusão das outras threads antes de prosseguir. Existem dois tipos de barreira:
 
-A `workgroupBarrier` will cause all the threads in the workgroup to wait
-until all other threads in the work group have reached the barrier. It
-will also sync up all atomic variables and data stored in workgroup address
-space as well.
+Um `workgroupBarrier` fará com que todas as threads do workgroup aguardem até que todas as outras threads daquele mesmo workgroup tenham atingido a barreira. Ele também sincronizará todas as variáveis atômicas e dados armazenados no espaço de endereçamento (address space) do workgroup.
 
 <Note>
 
-In WGSL and "address space" determines how a certain chunk of can be access.
-Data in the `workgroup` address space is only accessible by threads within
-the same workgroup. Many of the address spaces are implicit such as the
-`function` address space. The `uniform` and `storage` address spaces are
-significant as they correspond to uniform buffers and storage buffers
-respectively.
+Em WGSL, o "address space" determina como um determinado bloco de memória pode ser acessado. Dados no espaço de endereçamento `workgroup` só são acessíveis por threads dentro do mesmo workgroup. Muitos espaços de endereçamento são implícitos, como o `function`. Os espaços `uniform` e `storage` são significativos por corresponderem respectivamente a uniform buffers e storage buffers.
 
 </Note>
 
-A `storageBarrier` will cause the GPU to sync all changes to storage buffers.
-Since our data is in a storage buffer, this is the barrier we need to
-ensure that things stay in sync. Add the following line between the odd and
-even passes.
+Um `storageBarrier` fará com que a GPU sincronize todas as alterações feitas nos storage buffers. Como nossos dados estão em um storage buffer, esta é a barreira necessária para garantir que os dados permaneçam sincronizados. Adicione a seguinte linha entre os passos ímpar e par:
 
 ```wgsl
     storageBarrier();
 ```
 
-With that the `odd_even_sort` function looks like this:
+Com isso, a função `odd_even_sort` fica assim:
 
 ```wgsl
 @compute
@@ -198,7 +154,7 @@ fn odd_even_sort(
     let num_items = arrayLength(&data);
     let pair_index = gid.x;
 
-    // odd
+    // ímpar (odd)
     var a = pair_index * 2u + 1;
     var b = a + 1u;
 
@@ -210,7 +166,7 @@ fn odd_even_sort(
 
     storageBarrier();
 
-    // even
+    // par (even)
     a = pair_index * 2u;
     b = a + 1u;
 
@@ -222,17 +178,15 @@ fn odd_even_sort(
 }
 ```
 
-## Calling the shader
+## Chamando o shader
 
-Most of the code is the same as the introduction code, with the
-exception of only creating one storage buffer and the following
-code to call the shader:
+A maior parte do código Rust é igual à da introdução, com exceção de criar apenas um storage buffer e o seguinte trecho para chamar o shader:
 
 ```rust
-    let num_items_per_workgroup = 128; // 64 threads, 2 items per thread
+    let num_items_per_workgroup = 128; // 64 threads, 2 itens por thread
     let num_dispatches = (input_data.len() / num_items_per_workgroup) as u32
         + (input_data.len() % num_items_per_workgroup > 0) as u32;
-    // We do 2 passes in the shader so we only need to do half the passes
+    // Realizamos 2 passos no shader, então só precisamos executar metade das iterações
     let num_passes = input_data.len().div_ceil(2);
 
     {
@@ -246,19 +200,13 @@ code to call the shader:
     }
 ```
 
-With this, your data should be sorted. You can now use it for whatever purpose
-you need such as sorting transparent objects by their z coordinate, or sorting
-objects by what cell the belong to in a grid for collision detect and resolution.
-We'll be using sorting to implement some different algorithms in other parts of
-this guide.
+Com isso, seus dados devem estar ordenados. Você pode agora usá-los para qualquer finalidade necessária, como ordenar objetos transparentes pela coordenada Z, ou ordenar objetos pela célula da grade a que pertencem para detecção e resolução de colisões. Estaremos usando ordenação para implementar diferentes algoritmos em outras partes deste guia.
 
-## Conclusion
+## Conclusão
 
-Sorting is one of the pillars of software development and now that we can sort
-our GPU data without sending it on a round trip to the GPU. We'll be using this
-a lot in the rest of this guide.
+A ordenação é um dos pilares do desenvolvimento de software e agora podemos ordenar nossos dados na GPU sem precisar enviá-los em uma viagem de ida e volta para a CPU. Usaremos bastante isso no restante deste guia.
 
-Thanks for reading this, and a special thanks to these patrons!
+Obrigado pela leitura, e um agradecimento especial a estes apoiadores (patrons)!
 
 * Filip
 * Lions Heart

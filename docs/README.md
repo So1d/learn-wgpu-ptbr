@@ -1,30 +1,39 @@
-# Introduction
+> [!NOTE]
+> **Fork de Tradução para Português Brasileiro (PT-BR)**
+> 
+> Este repositório é um *fork* não-oficial para estudo pessoal do projeto [learn-wgpu](https://github.com/sotrh/learn-wgpu) por [@sotrh](https://github.com/sotrh).
+> Todo o conteúdo da documentação e os comentários do código Rust foram traduzidos para **Português Brasileiro (PT-BR)** utilizando Inteligência Artificial (IA).
+> 
+> ⚠️ **Aviso**: Por ser uma tradução automática feita via IA para apoio aos estudos, o texto pode conter erros pontuais, imprecisões ou palavras mal traduzidas. Para a versão oficial em inglês, acesse o [repositório original sotrh/learn-wgpu](https://github.com/sotrh/learn-wgpu).
 
-## What is wgpu?
+# Introdução
 
-[Wgpu](https://github.com/gfx-rs/wgpu) is a Rust implementation of the [WebGPU API spec](https://gpuweb.github.io/gpuweb/). WebGPU is a specification published by the GPU for the Web Community Group. It aims to allow web code access to GPU functions in a safe and reliable manner. It does this by mimicking the Vulkan API, and translating that down to whatever API the host hardware is using (ie. DirectX, Metal, Vulkan).
+## O que é o wgpu?
 
-Wgpu is still in development, so some of this doc is subject to change.
+O [Wgpu](https://github.com/gfx-rs/wgpu) é uma implementação em Rust da [especificação da API WebGPU](https://gpuweb.github.io/gpuweb/). A WebGPU é uma especificação publicada pelo grupo *GPU for the Web Community Group*. O seu objetivo é permitir que o código web acesse funções da GPU de maneira segura e confiável. Ela faz isso imitando a API Vulkan e traduzindo essas chamadas para a API nativa que o hardware hospedeiro utiliza (como DirectX, Metal ou Vulkan).
 
-## Why Rust?
+O Wgpu continua em desenvolvimento ativo, portanto partes desta documentação podem sofrer alterações.
 
-Wgpu actually has C bindings to allow you to write C/C++ code with it, as well as use other languages that interface with C. That being said, wgpu is written in Rust, and it has some convenient Rust bindings that don't have to jump through any hoops. On top of that, I've been enjoying writing in Rust.
+## Por que Rust?
 
-You should be fairly familiar with Rust before using this tutorial as I won't go into much detail on Rust syntax. If you're not super comfortable with Rust you can review the [Rust tutorial](https://www.rust-lang.org/learn). You should also be familiar with [Cargo](https://doc.rust-lang.org/cargo/).
+Na verdade, o Wgpu possui bindings em C que permitem escrever código em C/C++, além de outras linguagens que possuem interface com C. Dito isso, o Wgpu foi escrito nativamente em Rust e oferece bindings convenientes em Rust sem a necessidade de contornar complexidades. Além disso, a experiência de desenvolvimento em Rust é excelente.
 
-I'm using this project to learn wgpu myself, so I might miss some important details, or explain things badly. I'm always open to constructive feedback.
+Você deve ter uma boa familiaridade com o Rust antes de seguir este tutorial, pois não entraremos em detalhes sobre a sintaxe básica da linguagem. Caso queira revisar o Rust, você pode consultar o [tutorial oficial de Rust](https://www.rust-lang.org/learn). Também é recomendável estar familiarizado com o [Cargo](https://doc.rust-lang.org/cargo/).
 
-## Contribution and Support
+Este projeto foi construído no processo de aprendizado do próprio Wgpu, então sugestões e feedbacks construtivos são sempre bem-vindos.
 
-* I accept pull requests ([GitHub repo](https://github.com/sotrh/learn-wgpu)) for fixing issues with this tutorial such as typos, incorrect information, and other inconsistencies.
-* Due to wgpu's rapidly changing api, I'm not accepting any new pull requests for showcase demos.
-* If you want to support me directly, check out my [patreon](https://www.patreon.com/sotrh)!
+## Contribuição e Suporte
 
-## Translations
+* Pull requests são bem-vindos no ([repositório do GitHub](https://github.com/sotrh/learn-wgpu)) para correção de problemas neste tutorial, como erros de digitação, informações incorretas ou inconsistências.
+* Devido à evolução constante da API do wgpu, pull requests com novas demonstrações de showcase não estão sendo aceitos no momento.
+* Se quiser apoiar o autor original diretamente, confira o [patreon do sotrh](https://www.patreon.com/sotrh)!
 
-* [中文版: 增加了与 App 的集成与调试系列章节](https://jinleili.github.io/learn-wgpu-zh/)
+## Traduções
 
-## Special thanks to these patrons
+* [Versão em Chinês (中文版): 增加了与 App 的集成与调试系列章节](https://jinleili.github.io/learn-wgpu-zh/)
+* **Versão em Português Brasileiro (PT-BR)**: Esta documentação traduzida e mantida em PT-BR.
+
+## Agradecimentos especiais aos apoiadores do Patreon
 
 * David Laban
 * Bernard Llanos

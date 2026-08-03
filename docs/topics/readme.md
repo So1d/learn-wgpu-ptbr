@@ -1,24 +1,23 @@
-# Topics Covered
+# Tópicos Cobertos
 
-Here's a list of all the topics covered in this tutorial for people
-who are looking for a specific thing!
+Aqui está uma lista de todos os tópicos cobertos neste tutorial para quem está procurando por algo específico!
 
-## Basics
+## Conceitos Básicos
 
 - [Render Pipelines](/beginner/tutorial3-pipeline)
 - [Vertex Buffers](/beginner/tutorial4-buffer)
-- [Texturing](/beginner/tutorial5-textures)
+- [Texturização](/beginner/tutorial5-textures)
 - [Uniforms](/beginner/tutorial6-uniforms)
 - [Depth Buffer](/beginner/tutorial8-depth)
 
-## Lighting
+## Iluminação
 
 - [Blinn Phong](/intermediate/tutorial10-lighting)
-- [Normal Mapping](/intermediate/tutorial11-normals)
+- [Mapeamento de Normais (Normal Mapping)](/intermediate/tutorial11-normals)
 - [High Dynamic Range (HDR)](/intermediate/tutorial13-hdr)
 
-## Misc
+## Diversos
 
 - [Mipmapping](/todo)
-- [Instancing](/beginner/tutorial7-instancing)
-- [OBJ Loading](/beginner/tutorial9-models)
+- [Instanciamento (Instancing)](/beginner/tutorial7-instancing)
+- [Carregamento de OBJ](/beginner/tutorial9-models)

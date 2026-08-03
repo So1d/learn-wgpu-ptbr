@@ -1,18 +1,18 @@
-# Uniform buffers and a 3d camera
+# Uniform buffers e uma câmera 3D
 
-While all of our previous work has seemed to be in 2D, we've actually been working in 3d the entire time! That's part of the reason why our `Vertex` structure has `position` as an array of 3 floats instead of just 2. We can't really see the 3d-ness of our scene because we're viewing things head-on. We're going to change our point of view by creating a `Camera`.
+Embora todo o nosso trabalho anterior pareça ter sido em 2D, estivemos trabalhando em 3D o tempo todo! Essa é parte da razão pela qual nossa estrutura `Vertex` possui `position` como um array de 3 floats em vez de apenas 2. Não conseguimos ver o aspecto 3D da nossa cena porque a estamos observando de frente. Vamos mudar nosso ponto de vista criando uma `Camera`.
 
-## A perspective camera
+## Uma câmera de perspectiva
 
-This tutorial is more about learning to use wgpu and less about linear algebra, so I'm going to gloss over a lot of the math involved. There's plenty of reading material online if you're interested in what's going on under the hood. We're going to use the [cgmath](https://docs.rs/cgmath) to handle all the math for us. Add the following to your `Cargo.toml`.
+Este tutorial é mais sobre aprender a usar o wgpu e menos sobre álgebra linear, então vou passar rapidamente por grande parte da matemática envolvida. Há bastante material de leitura online se você estiver interessado no que acontece por baixo dos panos. Vamos usar a crate [cgmath](https://docs.rs/cgmath) para lidar com toda a matemática para nós. Adicione o seguinte ao seu `Cargo.toml`.
 
 ```toml
 [dependencies]
-# other deps...
+# outras deps...
 cgmath = "0.18"
 ```
 
-Now that we have a math library let's put it to use! Create a `Camera` struct above the `State` struct.
+Agora que temos uma biblioteca de matemática, vamos usá-la! Crie uma struct `Camera` acima da struct `State`.
 
 ```rust
 struct Camera {
@@ -38,10 +38,10 @@ impl Camera {
 }
 ```
 
-The `build_view_projection_matrix` is where the magic happens.
-1. The `view` matrix moves the world to be at the position and rotation of the camera. It's essentially an inverse of whatever the transform matrix of the camera would be.
-2. The `proj` matrix warps the scene to give the effect of depth. Without this, objects up close would be the same size as objects far away.
-3. The coordinate system in Wgpu is based on DirectX and Metal's coordinate systems. That means that in [normalized device coordinates](https://github.com/gfx-rs/gfx/tree/master/src/backend/dx12#normalized-coordinates), the x-axis and y-axis are in the range of -1.0 to +1.0, and the z-axis is 0.0 to +1.0. The `cgmath` crate (as well as most game math crates) is built for OpenGL's coordinate system. This matrix will scale and translate our scene from OpenGL's coordinate system to WGPU's. We'll define it as follows.
+O método `build_view_projection_matrix` é onde a mágica acontece.
+1. A matriz `view` move o mundo para ficar na posição e rotação da câmera. É essencialmente a inversa do que seria a matriz de transformação da câmera.
+2. A matriz `proj` deforma a cena para criar o efeito de profundidade. Sem isso, objetos próximos teriam o mesmo tamanho de objetos distantes.
+3. O sistema de coordenadas no Wgpu é baseado nos sistemas de coordenadas do DirectX e Metal. Isso significa que em [coordenadas normalizadas de dispositivo](https://github.com/gfx-rs/gfx/tree/master/src/backend/dx12#normalized-coordinates), os eixos x e y estão no intervalo de -1.0 a +1.0, e o eixo z está no intervalo de 0.0 a +1.0. A crate `cgmath` (assim como a maioria das crates de matemática para jogos) foi construída para o sistema de coordenadas do OpenGL. Esta matriz vai escalar e transladar nossa cena do sistema de coordenadas do OpenGL para o do WGPU. Vamos defini-la da seguinte forma.
 
 ```rust
 #[rustfmt::skip]
@@ -53,9 +53,9 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_co
 );
 ```
 
-* Note: We don't explicitly **need** the `OPENGL_TO_WGPU_MATRIX`, but models centered on (0, 0, 0) will be halfway inside the clipping area. This is only an issue if you aren't using a camera matrix.
+* Nota: Não **precisamos** explicitamente da `OPENGL_TO_WGPU_MATRIX`, mas modelos centralizados em (0, 0, 0) ficarão pela metade dentro da área de clipping. Isso só é um problema se você não estiver usando uma matriz de câmera.
 
-Now let's add a `camera` field to `State`.
+Agora vamos adicionar um campo `camera` à struct `State`.
 
 ```rust
 pub struct State {
@@ -68,12 +68,12 @@ async fn new(window: Window) -> Self {
     // let diffuse_bind_group ...
 
     let camera = Camera {
-        // position the camera 1 unit up and 2 units back
-        // +z is out of the screen
+        // posiciona a câmera 1 unidade para cima e 2 unidades para trás
+        // +z sai da tela
         eye: (0.0, 1.0, 2.0).into(),
-        // have it look at the origin
+        // faz ela olhar para a origem
         target: (0.0, 0.0, 0.0).into(),
-        // which way is "up"
+        // qual direção é "para cima"
         up: cgmath::Vector3::unit_y(),
         aspect: config.width as f32 / config.height as f32,
         fovy: 45.0,
@@ -89,20 +89,20 @@ async fn new(window: Window) -> Self {
 }
 ```
 
-Now that we have our camera, and it can make us a view projection matrix, we need somewhere to put it. We also need some way of getting it into our shaders.
+Agora que temos nossa câmera e ela pode nos gerar uma matriz view projection, precisamos de um lugar para armazená-la. Também precisamos de uma forma de enviá-la para nossos shaders.
 
-## The uniform buffer
+## O uniform buffer
 
-Up to this point, we've used `Buffer`s to store our vertex and index data, and even to load our textures. We are going to use them again to create what's known as a uniform buffer. A uniform is a blob of data available to every invocation of a set of shaders. Technically, we've already used uniforms for our texture and sampler. We're going to use them again to store our view projection matrix. To start, let's create a struct to hold our uniform.
+Até este ponto, usamos `Buffer`s para armazenar nossos dados de vértices e índices, e até mesmo para carregar nossas texturas. Vamos usá-los novamente para criar o que é conhecido como um uniform buffer. Um uniform é um bloco de dados disponível para cada invocação de um conjunto de shaders. Tecnicamente, já usamos uniforms para nossa textura e sampler. Vamos usá-los novamente para armazenar nossa matriz view projection. Para começar, vamos criar uma struct para conter nosso uniform.
 
 ```rust
-// We need this for Rust to store our data correctly for the shaders
+// Precisamos disso para que o Rust armazene nossos dados corretamente para os shaders
 #[repr(C)]
-// This is so we can store this in a buffer
+// Isso é para podermos armazenar isso em um buffer
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
-    // We can't use cgmath with bytemuck directly, so we'll have
-    // to convert the Matrix4 into a 4x4 f32 array
+    // Não podemos usar cgmath com bytemuck diretamente, então teremos
+    // que converter o Matrix4 em um array 4x4 de f32
     view_proj: [[f32; 4]; 4],
 }
 
@@ -120,10 +120,10 @@ impl CameraUniform {
 }
 ```
 
-Now that we have our data structured, let's make our `camera_buffer`.
+Agora que temos nossos dados estruturados, vamos criar nosso `camera_buffer`.
 
 ```rust
-// in new() after creating `camera`
+// em new() após criar `camera`
 
 let mut camera_uniform = CameraUniform::new();
 camera_uniform.update_view_proj(&camera);
@@ -137,9 +137,9 @@ let camera_buffer = device.create_buffer_init(
 );
 ```
 
-## Uniform buffers and bind groups
+## Uniform buffers e bind groups
 
-Cool! Now that we have a uniform buffer, what do we do with it? The answer is we create a bind group for it. First, we have to create the bind group layout.
+Legal! Agora que temos um uniform buffer, o que fazemos com ele? A resposta é criar um bind group para ele. Primeiro, temos que criar o bind group layout.
 
 ```rust
 let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -159,17 +159,13 @@ let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupL
 });
 ```
 
-Some things to note:
+Alguns pontos a observar:
 
-1. We set `visibility` to `ShaderStages::VERTEX` as we only really need camera information in the vertex shader, as
-    that's what we'll use to manipulate our vertices.
-2. The `has_dynamic_offset` means that the location of the data in the buffer may change. This will be the case if you
-    store multiple data sets that vary in size in a single buffer. If you set this to true, you'll have to supply the
-    offsets later.
-3. `min_binding_size` specifies the smallest size the buffer can be. You don't have to specify this, so we
-    leave it `None`. If you want to know more, you can check [the docs](https://docs.rs/wgpu/latest/wgpu/enum.BindingType.html#variant.Buffer.field.min_binding_size).
+1. Definimos `visibility` como `ShaderStages::VERTEX`, pois só precisamos das informações da câmera no vertex shader, já que é ele que usaremos para manipular nossos vértices.
+2. O `has_dynamic_offset` significa que a localização dos dados no buffer pode mudar. Esse será o caso se você armazenar múltiplos conjuntos de dados que variam de tamanho em um único buffer. Se você definir isso como true, terá que fornecer os offsets mais tarde.
+3. `min_binding_size` especifica o menor tamanho que o buffer pode ter. Você não precisa especificar isso, então deixamos como `None`. Se quiser saber mais, pode consultar [a documentação](https://docs.rs/wgpu/latest/wgpu/enum.BindingType.html#variant.Buffer.field.min_binding_size).
 
-Now, we can create the actual bind group.
+Agora, podemos criar o bind group propriamente dito.
 
 ```rust
 let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -184,7 +180,7 @@ let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 });
 ```
 
-Like with our texture, we need to register our `camera_bind_group_layout` with the render pipeline.
+Assim como fizemos com nossa textura, precisamos registrar nosso `camera_bind_group_layout` no pipeline de renderização.
 
 ```rust
 let render_pipeline_layout = device.create_pipeline_layout(
@@ -199,7 +195,7 @@ let render_pipeline_layout = device.create_pipeline_layout(
 );
 ```
 
-Now we need to add `camera_buffer` and `camera_bind_group` to `State`
+Agora precisamos adicionar `camera_buffer` e `camera_bind_group` ao `State`
 
 ```rust
 pub struct State {
@@ -222,12 +218,12 @@ async fn new(window: Window) -> Self {
 }
 ```
 
-The final thing we need to do before we get into shaders is use the bind group in `render()`.
+A última coisa que precisamos fazer antes de ir para os shaders é usar o bind group em `render()`.
 
 ```rust
 render_pass.set_pipeline(&self.render_pipeline);
 render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-// NEW!
+// NOVO!
 render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -235,9 +231,9 @@ render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uin
 render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 ```
 
-## Using the uniform in the vertex shader
+## Usando o uniform no vertex shader
 
-Modify the vertex shader to include the following.
+Modifique o vertex shader para incluir o seguinte.
 
 ```wgsl
 // Vertex shader
@@ -268,16 +264,16 @@ fn vs_main(
 }
 ```
 
-1. Because we've created a new bind group, we need to specify which one we're using in the shader. The number is determined by our `render_pipeline_layout`. The `texture_bind_group_layout` is listed first, thus it's `group(0)`, and `camera_bind_group` is second, so it's `group(1)`.
-2. Multiplication order is important when it comes to matrices. The vector goes on the right, and the matrices go on the left in order of importance.
+1. Como criamos um novo bind group, precisamos especificar qual deles estamos usando no shader. O número é determinado pelo nosso `render_pipeline_layout`. O `texture_bind_group_layout` é listado primeiro, portanto é o `group(0)`, e o `camera_bind_group` é o segundo, portanto é o `group(1)`.
+2. A ordem de multiplicação é importante quando se trata de matrizes. O vetor vai à direita, e as matrizes vão à esquerda em ordem de importância.
 
-## A controller for our camera
+## Um controlador para nossa câmera
 
-If you run the code right now, you should get something like this.
+Se você executar o código agora, deverá obter algo como isto.
 
 ![./static-tree.png](./static-tree.png)
 
-The shape's less stretched now, but it's still pretty static. You can experiment with moving the camera position around, but most cameras in games move around. Since this tutorial is about using wgpu and not how to process user input, I'm just going to post the `CameraController` code below.
+A forma agora está menos esticada, mas ainda está bastante estática. Você pode experimentar mover a posição da câmera por aí, mas a maioria das câmeras em jogos se move. Como este tutorial é sobre o uso do wgpu e não sobre como processar entradas do usuário, vou apenas postar o código do `CameraController` abaixo.
 
 ```rust
 struct CameraController {
@@ -327,8 +323,8 @@ impl CameraController {
         let forward_norm = forward.normalize();
         let forward_mag = forward.magnitude();
 
-        // Prevents glitching when the camera gets too close to the
-        // center of the scene.
+        // Evita glitches quando a câmera fica muito próxima do
+        // centro da cena.
         if self.is_forward_pressed && forward_mag > self.speed {
             camera.eye += forward_norm * self.speed;
         }
@@ -338,14 +334,13 @@ impl CameraController {
 
         let right = forward_norm.cross(camera.up);
 
-        // Redo radius calc in case the forward/backward is pressed.
+        // Refaz o cálculo do raio caso a tecla para frente/trás esteja pressionada.
         let forward = camera.target - camera.eye;
         let forward_mag = forward.magnitude();
 
         if self.is_right_pressed {
-            // Rescale the distance between the target and the eye so 
-            // that it doesn't change. The eye, therefore, still 
-            // lies on the circle made by the target and eye.
+            // Redimensiona a distância entre o alvo e o olho para que não mude.
+            // O olho, portanto, continua no círculo formado pelo alvo e pelo olho.
             camera.eye = camera.target - (forward + right * self.speed).normalize() * forward_mag;
         }
         if self.is_left_pressed {
@@ -355,15 +350,15 @@ impl CameraController {
 }
 ```
 
-This code is not perfect. The camera slowly moves back when you rotate it. It works for our purposes, though. Feel free to improve it!
+Este código não é perfeito. A câmera se move lentamente para trás quando você a rotaciona. No entanto, funciona para nossos propósitos. Sinta-se à vontade para melhorá-lo!
 
-We still need to plug this into our existing code to make it do anything. Add the controller to `State` and create it in `new()`.
+Ainda precisamos conectar isso ao nosso código existente para fazê-lo funcionar. Adicione o controlador ao `State` e crie-o em `new()`.
 
 ```rust
 pub struct State {
     // ...
     camera: Camera,
-    // NEW!
+    // NOVO!
     camera_controller: CameraController,
     // ...
 }
@@ -383,7 +378,7 @@ impl State {
 }
 ```
 
-We will update the `camera_controller` in the `handle_key` function.
+Vamos atualizar o `camera_controller` na função `handle_key`.
 
 ```rust
     fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
@@ -395,13 +390,13 @@ We will update the `camera_controller` in the `handle_key` function.
     }
 ```
 
-Up to this point, the camera controller isn't actually doing anything. The values in our uniform buffer need to be updated. There are a few main methods to do that.
+Até este ponto, o controlador de câmera não está realmente fazendo nada. Os valores em nosso uniform buffer precisam ser atualizados. Existem alguns métodos principais para fazer isso.
 
-1. We can create a separate buffer and copy its contents to our `camera_buffer`. The new buffer is known as a staging buffer. This method is usually how it's done as it allows the contents of the main buffer (in this case, `camera_buffer`) to be accessible only by the GPU. The GPU can do some speed optimizations, which it couldn't if we could access the buffer via the CPU.
-2. We can call one of the mapping methods `map_read_async`, and `map_write_async` on the buffer itself. These allow us to access a buffer's contents directly but require us to deal with the `async` aspect of these methods. This also requires our buffer to use the `BufferUsages::MAP_READ` and/or `BufferUsages::MAP_WRITE`. We won't talk about it here, but check out the [Wgpu without a window](../../showcase/windowless) tutorial if you want to know more.
-3. We can use `write_buffer` on `queue`.
+1. Podemos criar um buffer separado e copiar seus conteúdos para o nosso `camera_buffer`. O novo buffer é conhecido como um staging buffer. Esse método é geralmente como é feito, pois permite que o conteúdo do buffer principal (neste caso, `camera_buffer`) seja acessível apenas pela GPU. A GPU pode fazer algumas otimizações de velocidade, o que não conseguiria se pudéssemos acessar o buffer via CPU.
+2. Podemos chamar um dos métodos de mapeamento `map_read_async` e `map_write_async` no próprio buffer. Eles nos permitem acessar o conteúdo de um buffer diretamente, mas exigem que lidemos com o aspecto `async` desses métodos. Isso também exige que nosso buffer use `BufferUsages::MAP_READ` e/ou `BufferUsages::MAP_WRITE`. Não falaremos sobre isso aqui, mas confira o tutorial [Wgpu sem uma janela](../../showcase/windowless) se quiser saber mais.
+3. Podemos usar `write_buffer` na `queue`.
 
-We're going to use option number 3.
+Vamos usar a opção número 3.
 
 ```rust
 fn update(&mut self) {
@@ -411,14 +406,14 @@ fn update(&mut self) {
 }
 ```
 
-That's all we need to do. If you run the code now, you should see a pentagon with our tree texture that you can rotate around and zoom into with the wasd/arrow keys.
+Isso é tudo que precisamos fazer. Se você executar o código agora, deverá ver um pentágono com nossa textura de árvore que você pode rotacionar e aproximar/afastar usando as teclas WASD/setas.
 
-## Demo
+## Demonstração
 
 <WasmExample example="tutorial6_uniforms"></WasmExample>
 
 <AutoGithubLink/>
 
-## Challenge
+## Desafio
 
-Have our model rotate on its own independently of the camera. *Hint: you'll need another matrix for this.*
+Faça com que nosso modelo rotacione por conta própria, independentemente da câmera. *Dica: você precisará de outra matriz para isso.*

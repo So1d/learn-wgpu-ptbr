@@ -7,7 +7,7 @@ import topLevelAwait from "vite-plugin-top-level-await";
 
 export default defineUserConfig({
   base: "/learn-wgpu/",
-  title: "Learn Wgpu",
+  title: "Aprenda Wgpu",
   public: "res",
   bundler: viteBundler({
     viteOptions: {
@@ -17,11 +17,11 @@ export default defineUserConfig({
   theme: defaultTheme({
     navbar: [
       {
-        text: "Home",
+        text: "Início",
         link: "/",
       },
       {
-        text: "Beginner",
+        text: "Iniciante",
         collapsable: false,
         children: [
           "/beginner/tutorial1-window/",
@@ -36,7 +36,7 @@ export default defineUserConfig({
         ],
       },
       {
-        text: "Intermediate",
+        text: "Intermediário",
         collapsable: false,
         children: [
           "/intermediate/tutorial10-lighting/",
@@ -46,7 +46,7 @@ export default defineUserConfig({
         ],
       },
       {
-        text: "Compute Pipelines",
+        text: "Pipelines de Computação",
         collapsable: true,
         children: ["/compute/introduction/", "/compute/sorting/"],
       },
@@ -62,30 +62,6 @@ export default defineUserConfig({
           "/showcase/pong/",
           "/showcase/alignment/",
           // '/showcase/compute/',
-        ],
-      },
-      {
-        text: "News",
-        collapsable: true,
-        children: [
-          "/news/30.0/",
-          "/news/29.0/",
-          "/news/vuepress-v2/",
-          "/news/28.0/",
-          "/news/27.0/",
-          "/news/26.0.1/",
-          "/news/update-to-winit-0.30/",
-          "/news/25.0/",
-          "/news/24.0/",
-          "/news/22.0/",
-          "/news/0.18 and hdr/",
-          "/news/0.17/",
-          "/news/0.16/",
-          "/news/0.15/",
-          "/news/0.14/",
-          "/news/0.13/",
-          "/news/0.12/",
-          "/news/pre-0.12/",
         ],
       },
     ],

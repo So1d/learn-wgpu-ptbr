@@ -82,7 +82,7 @@ pub async fn run() -> anyhow::Result<()> {
     let num_items_per_workgroup = 64;
     let num_dispatches = (input_data.len() / num_items_per_workgroup) as u32
         + (input_data.len() % num_items_per_workgroup > 0) as u32;
-    // We do 2 dispatches so we only need to do half the passes
+    // Fazemos 2 dispatches por iteração, então só precisamos executar metade dos passos
     let num_passes = input_data.len() / 2 + input_data.len() % 2;
 
     {
@@ -112,7 +112,7 @@ pub async fn run() -> anyhow::Result<()> {
         let output_data = temp_buffer.get_mapped_range(..)?;
         let u32_data = bytemuck::cast_slice::<_, u32>(&output_data);
 
-        // Confirm that the list is sorted
+        // Confirma que a lista está ordenada
         for i in 1..u32_data.len() {
             assert!(
                 u32_data[i] > u32_data[i - 1],

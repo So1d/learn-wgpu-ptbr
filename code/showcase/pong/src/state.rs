@@ -35,7 +35,7 @@ pub struct Player {
     pub visible: bool,
 }
 
-// I don't like giving state methods, but whatever
+// Não gosto de dar métodos a structs de estado, mas tudo bem
 impl Player {
     pub fn contains(&self, ball: &Ball) -> bool {
         let radii = self.size * 0.5;

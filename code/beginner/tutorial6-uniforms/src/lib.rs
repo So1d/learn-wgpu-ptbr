@@ -174,8 +174,8 @@ impl CameraController {
         let forward_norm = forward.normalize();
         let forward_mag = forward.magnitude();
 
-        // Prevents glitching when camera gets too close to the
-        // center of the scene.
+        // Evita glitches quando a câmera fica muito próxima do
+        // centro da cena.
         if self.is_forward_pressed && forward_mag > self.speed {
             camera.eye += forward_norm * self.speed;
         }
@@ -185,14 +185,14 @@ impl CameraController {
 
         let right = forward_norm.cross(camera.up);
 
-        // Redo radius calc in case the up/ down is pressed.
+        // Refaz o cálculo do raio caso a tecla para cima/baixo esteja pressionada.
         let forward = camera.target - camera.eye;
         let forward_mag = forward.magnitude();
 
         if self.is_right_pressed {
-            // Rescale the distance between the target and eye so
-            // that it doesn't change. The eye therefore still
-            // lies on the circle made by the target and eye.
+            // Redimensiona a distância entre o alvo e o olho para
+            // que não mude. O olho, portanto, continua
+            // no círculo formado pelo alvo e pelo olho.
             camera.eye = camera.target - (forward + right * self.speed).normalize() * forward_mag;
         }
         if self.is_left_pressed {
@@ -214,7 +214,7 @@ pub struct State {
     #[allow(dead_code)]
     diffuse_texture: texture::Texture,
     diffuse_bind_group: wgpu::BindGroup,
-    // NEW!
+    // NOVO!
     camera: Camera,
     camera_controller: CameraController,
     camera_uniform: CameraUniform,
@@ -227,7 +227,7 @@ impl State {
     async fn new(window: Arc<Window>) -> anyhow::Result<State> {
         let size = window.inner_size();
 
-        // The instance is a handle to our GPU
+        // A instância é um handle para a nossa GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             #[cfg(not(target_arch = "wasm32"))]
@@ -256,23 +256,23 @@ impl State {
                 label: None,
                 required_features: wgpu::Features::empty(),
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
-                // WebGL doesn't support all of wgpu's features, so if
-                // we're building for the web we'll have to disable some.
+                // O WebGL não suporta todos os recursos do wgpu, então se
+                // estivermos compilando para a web teremos que desativar alguns.
                 required_limits: if cfg!(target_arch = "wasm32") {
                     wgpu::Limits::downlevel_webgl2_defaults()
                 } else {
                     wgpu::Limits::default()
                 },
                 memory_hints: Default::default(),
-                trace: wgpu::Trace::Off, // Trace path
+                trace: wgpu::Trace::Off, // Caminho do trace
             })
             .await
             .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
-        // Shader code in this tutorial assumes an Srgb surface texture. Using a different
-        // one will result all the colors comming out darker. If you want to support non
-        // Srgb surfaces, you'll need to account for that when drawing to the frame.
+        // O código do shader neste tutorial assume uma textura de superfície Srgb. Usar uma
+        // diferente fará com que todas as cores saiam mais escuras. Se quiser suportar superfícies
+        // não-Srgb, você precisará levar isso em conta ao desenhar no frame.
         let surface_format = surface_caps
             .formats
             .iter()
@@ -419,12 +419,12 @@ impl State {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
-                // or Features::POLYGON_MODE_POINT
+                // Definir isto para qualquer coisa diferente de Fill requer Features::POLYGON_MODE_LINE
+                // ou Features::POLYGON_MODE_POINT
                 polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLIP_CONTROL
+                // Requer Features::DEPTH_CLIP_CONTROL
                 unclipped_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
+                // Requer Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
             depth_stencil: None,
@@ -433,10 +433,10 @@ impl State {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-            // If the pipeline will be used with a multiview render pass, this
-            // tells wgpu to render to just specific texture layers.
+            // Se o pipeline for usado com um render pass multiview, isto
+            // diz ao wgpu para renderizar apenas em camadas de textura específicas.
             multiview_mask: None,
-            // Useful for optimizing shader compilation on Android
+            // Útil para otimizar a compilação do shader no Android
             cache: None,
         });
 
@@ -510,7 +510,7 @@ impl State {
     fn render(&mut self) -> anyhow::Result<()> {
         self.window.request_redraw();
 
-        // We can't render unless the surface is configured
+        // Não podemos renderizar a menos que a superfície esteja configurada
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -523,7 +523,7 @@ impl State {
             wgpu::CurrentSurfaceTexture::Timeout
             | wgpu::CurrentSurfaceTexture::Occluded
             | wgpu::CurrentSurfaceTexture::Validation => {
-                // Skip this frame
+                // Ignora este frame
                 return Ok(());
             }
             wgpu::CurrentSurfaceTexture::Outdated => {
@@ -531,8 +531,8 @@ impl State {
                 return Ok(());
             }
             wgpu::CurrentSurfaceTexture::Lost => {
-                // You could recreate the devices and all resources
-                // created with it here, but we'll just bail
+                // Você poderia recriar os dispositivos e todos os recursos
+                // criados com ele aqui, mas vamos apenas sair
                 anyhow::bail!("Lost device");
             }
         };
@@ -625,8 +625,8 @@ impl ApplicationHandler<State> for App {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            // If we are not on web we can use pollster to
-            // await the
+            // Se não estivermos na web, podemos usar pollster para
+            // aguardar o futuro
             self.state = Some(pollster::block_on(State::new(window)).unwrap());
         }
 
@@ -678,7 +678,7 @@ impl ApplicationHandler<State> for App {
                 match state.render() {
                     Ok(_) => {}
                     Err(e) => {
-                        // Log the error and exit gracefully
+                        // Registra o erro e sai graciosamente
                         log::error!("{e}");
                         event_loop.exit();
                     }

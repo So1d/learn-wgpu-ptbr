@@ -38,7 +38,7 @@ impl<'a> Render<'a> {
 
     pub async fn new(window: Arc<Window>, size: PhysicalSize<u32>) -> Render<'a> {
         log::warn!("size: {:?}", size);
-        // The instance is a handle to our GPU
+        // O instance é um handle para a nossa GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             #[cfg(not(target_arch = "wasm32"))]
@@ -69,15 +69,15 @@ impl<'a> Render<'a> {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
                 },
-                None, // Trace path
+                None, // Caminho de trace
             )
             .await
             .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
-        // Shader code in this tutorial assumes an Srgb surface texture. Using a different
-        // one will result all the colors comming out darker. If you want to support non
-        // Srgb surfaces, you'll need to account for that when drawing to the frame.
+        // O código do shader neste tutorial supõe uma textura de superfície Srgb. Usar uma diferente
+        // fará com que todas as cores saiam mais escuras. Se desejar dar suporte a superfícies não
+        // Srgb, você precisará compensar isso ao desenhar no frame.
         let surface_format = surface_caps
             .formats
             .iter()
@@ -302,11 +302,11 @@ fn create_render_pipeline(
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
             cull_mode: Some(wgpu::Face::Back),
-            // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+            // Definir isso para qualquer valor diferente de Fill requer Features::NON_FILL_POLYGON_MODE
             polygon_mode: wgpu::PolygonMode::Fill,
-            // Requires Features::DEPTH_CLIP_CONTROL
+            // Requer Features::DEPTH_CLIP_CONTROL
             unclipped_depth: false,
-            // Requires Features::CONSERVATIVE_RASTERIZATION
+            // Requer Features::CONSERVATIVE_RASTERIZATION
             conservative: false,
         },
         depth_stencil: None,
@@ -315,8 +315,8 @@ fn create_render_pipeline(
             mask: !0,
             alpha_to_coverage_enabled: false,
         },
-        // If the pipeline will be used with a multiview render pass, this
-        // tells wgpu to render to just specific texture layers.
+        // Se o pipeline for usado com um pass de renderização multiview, isso
+        // indica ao wgpu para renderizar apenas em camadas de textura específicas.
         multiview_mask: None,
         cache: None,
     })

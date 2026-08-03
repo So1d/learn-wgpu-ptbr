@@ -55,7 +55,7 @@ pub fn start() {
                 let canvas = web_sys::Element::from(window.canvas()?);
                 dst.append_child(&canvas).ok()?;
 
-                // Request fullscreen, if denied, continue as normal
+                // Solicita tela cheia; se negado, continua normalmente
                 match canvas.request_fullscreen() {
                     Ok(_) => {}
                     Err(_) => (),
@@ -216,7 +216,7 @@ pub fn start() {
                                 sound_system.queue(sound_pack.bounce());
                             }
                             state::Event::Resize(width, height) => {
-                                // TODO: there should be a system that handles this
+                                // TODO: deveria haver um sistema que lidasse com isso
                                 state.player1_score.position = (width * 0.25, 20.0).into();
                                 state.player2_score.position = (width * 0.75, 20.0).into();
                                 state.win_text.position = (width * 0.5, height * 0.5).into();

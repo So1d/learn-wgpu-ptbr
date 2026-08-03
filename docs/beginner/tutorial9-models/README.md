@@ -1,8 +1,8 @@
-# Model Loading
+# Carregamento de Modelos
 
-Up to this point, we've been creating our models manually. While this is an acceptable way to do this, it's really slow if we want to include complex models with lots of polygons. Because of this, we're going to modify our code to leverage the `.obj` model format so that we can create a model in software such as Blender and display it in our code.
+Até este ponto, estivemos criando nossos modelos manualmente. Embora essa seja uma forma aceitável de fazer isso, é muito lento se quisermos incluir modelos complexos com muitos polígonos. Por causa disso, vamos modificar nosso código para aproveitar o formato de modelo `.obj` para que possamos criar um modelo em um software como o Blender e exibi-lo em nosso código.
 
-Our `lib.rs` file is getting pretty cluttered. Let's create a `model.rs` file into which we can put our model loading code.
+Nosso arquivo `lib.rs` está ficando bastante desordenado. Vamos criar um arquivo `model.rs` no qual podemos colocar nosso código de carregamento de modelos.
 
 ```rust
 // model.rs
@@ -25,11 +25,11 @@ impl Vertex for ModelVertex {
 }
 ```
 
-You'll notice a couple of things here. In `lib.rs`, we had `Vertex` as a struct, but here we're using a trait. We could have multiple vertex types (model, UI, instance data, etc.). Making `Vertex` a trait will allow us to abstract out the `VertexBufferLayout` creation code to make creating `RenderPipeline`s simpler.
+Você notará algumas coisas aqui. Em `lib.rs`, tínhamos `Vertex` como uma struct, mas aqui estamos usando uma trait. Poderíamos ter múltiplos tipos de vértices (modelo, interface de usuário/UI, dados de instância, etc.). Fazer do `Vertex` uma trait nos permitirá abstrair o código de criação do `VertexBufferLayout` para tornar a criação de `RenderPipeline`s mais simples.
 
-Another thing to mention is the `normal` field in `ModelVertex`. We won't use this until we talk about lighting, but will add it to the struct for now.
+Outra coisa a mencionar é o campo `normal` na `ModelVertex`. Não usaremos isso até falarmos sobre iluminação, mas vamos adicioná-lo à struct por enquanto.
 
-Let's define our `VertexBufferLayout`.
+Vamos definir nosso `VertexBufferLayout`.
 
 ```rust
 impl Vertex for ModelVertex {
@@ -60,9 +60,9 @@ impl Vertex for ModelVertex {
 }
 ```
 
-This is basically the same as the original `VertexBufferLayout`, but we added a `VertexAttribute` for the `normal`. Remove the `Vertex` struct in `lib.rs` as we won't need it anymore, and use our new `Vertex` from `model` for the `RenderPipeline`.
+Isso é basicamente o mesmo que o `VertexBufferLayout` original, mas adicionamos um `VertexAttribute` para a `normal`. Remova a struct `Vertex` em `lib.rs`, pois não precisaremos mais dela, e use nossa nova trait `Vertex` de `model` para o `RenderPipeline`.
 
-We will also remove our homemade `vertex_buffer`, `index_buffer` and `num_indices`.
+Também removeremos nossos `vertex_buffer`, `index_buffer` e `num_indices` feitos à mão.
 
 ```rust
 let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -75,19 +75,19 @@ let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescrip
 });
 ```
 
-Since the `desc` method is implemented on the `Vertex` trait, the trait needs to be imported before the method will be accessible. Put the import towards the top of the file with the others.
+Como o método `desc` é implementado na trait `Vertex`, a trait precisa ser importada antes que o método fique acessível. Coloque a importação perto do topo do arquivo com as outras.
 
 ```rust
 use model::Vertex;
 ```
 
-With all that in place, we need a model to render. If you have one already, that's great, but I've supplied a [zip file](https://github.com/sotrh/learn-wgpu/blob/master/code/beginner/tutorial9-models/res/cube.zip) with the model and all of its textures. We're going to put this model in a new `res` folder next to the existing `src` folder.
+Com tudo isso no lugar, precisamos de um modelo para renderizar. Se você já tiver um, ótimo, mas forneci um [arquivo zip](https://github.com/sotrh/learn-wgpu/blob/master/code/beginner/tutorial9-models/res/cube.zip) com o modelo e todas as suas texturas. Vamos colocar este modelo em uma nova pasta `res` ao lado da pasta `src` existente.
 
-## Accessing files in the res folder
+## Acessando arquivos na pasta res
 
-When Cargo builds and runs our program, it sets what's known as the current working directory. This directory usually contains your project's root `Cargo.toml`. The path to our res folder may differ depending on the project's structure. In the `res` folder, the example code for this section tutorial is at `code/beginner/tutorial9-models/res/`. When loading our model, we could use this path and just append `cube.obj`. This is fine, but if we change our project's structure, our code will break.
+Quando o Cargo compila e executa nosso programa, ele define o que é conhecido como diretório de trabalho atual (current working directory). Esse diretório geralmente contém o `Cargo.toml` raiz do seu projeto. O caminho para a nossa pasta res pode variar dependendo da estrutura do projeto. Na pasta `res`, o código de exemplo para este tutorial está em `code/beginner/tutorial9-models/res/`. Ao carregar nosso modelo, poderíamos usar esse caminho e apenas anexar `cube.obj`. Isso funciona, mas se mudarmos a estrutura do nosso projeto, nosso código quebrará.
 
-We're going to fix that by modifying our build script to copy our `res` folder to where Cargo creates our executable, and we'll reference it from there. Create a file called `build.rs` and add the following:
+Vamos corrigir isso modificando nosso script de compilação (build script) para copiar nossa pasta `res` para onde o Cargo cria nosso executável, e faremos referência a ela a partir de lá. Crie um arquivo chamado `build.rs` e adicione o seguinte:
 
 ```rust
 use anyhow::*;
@@ -96,7 +96,7 @@ use fs_extra::dir::CopyOptions;
 use std::env;
 
 fn main() -> Result<()> {
-    // This tells Cargo to rerun this script if something in /res/ changes.
+    // Isso instrui o Cargo a reexecutar este script se algo em /res/ mudar.
     println!("cargo:rerun-if-changed=res/*");
 
     let out_dir = env::var("OUT_DIR")?;
@@ -112,17 +112,17 @@ fn main() -> Result<()> {
 
 <Note>
 
-Make sure to put `build.rs` in the same folder as the `Cargo.toml`. If you don't, Cargo won't run it when your crate builds.
+Certifique-se de colocar `build.rs` na mesma pasta do `Cargo.toml`. Se não o fizer, o Cargo não o executará quando sua crate for compilada.
 
 </Note>
 
 <Note>
 
-The `OUT_DIR` is an environment variable that Cargo uses to specify where our application will be built.
+O `OUT_DIR` é uma variável de ambiente que o Cargo usa para especificar onde nossa aplicação será compilada.
 
 </Note>
 
-You'll need to modify your `Cargo.toml` for this to work properly. Add the following below your `[dependencies]` block.
+Você precisará modificar seu `Cargo.toml` para que isso funcione corretamente. Adicione o seguinte abaixo do seu bloco `[dependencies]`.
 
 ```toml
 [build-dependencies]
@@ -131,9 +131,9 @@ fs_extra = "1.2"
 glob = "0.3"
 ```
 
-## Accessing files from WASM
+## Acessando arquivos a partir do WASM
 
-By design, you can't access files on a user's filesystem in Web Assembly. Instead, we'll serve those files up using a web serve and then load those files into our code using an http request. In order to simplify this, let's create a file called `resources.rs` to handle this for us. We'll create two functions that load text and binary files, respectively.
+Por design, você não pode acessar arquivos no sistema de arquivos de um usuário no WebAssembly. Em vez disso, disponibilizaremos esses arquivos usando um servidor web e depois os carregaremos em nosso código usando uma requisição HTTP. Para simplificar isso, vamos criar um arquivo chamado `resources.rs` para cuidar disso para nós. Criaremos duas funções que carregam arquivos de texto e binários, respectivamente.
 
 ```rust
 use std::io::{BufReader, Cursor};
@@ -191,19 +191,19 @@ pub async fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
 
 <Note>
 
-We're using `OUT_DIR` on desktop to access our `res` folder.
+Estamos usando `OUT_DIR` no desktop para acessar nossa pasta `res`.
 
 </Note>
 
-I'm using [reqwest](https://docs.rs/reqwest) to handle loading the requests when using WASM. Add the following to the `Cargo.toml`:
+Estou usando a biblioteca [reqwest](https://docs.rs/reqwest) para gerenciar o carregamento das requisições ao usar WASM. Adicione o seguinte ao `Cargo.toml`:
 
 ```toml
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-# Other dependencies
+# Outras dependências
 reqwest = { version = "0.11" }
 ```
 
-We'll also need to add the `Location` feature to `web-sys`:
+Também precisaremos adicionar a feature `Location` ao `web-sys`:
 
 ```toml
 web-sys = { version = "0.3", features = [
@@ -214,23 +214,23 @@ web-sys = { version = "0.3", features = [
 ]}
 ```
 
-Make sure to add `resources` as a module in `lib.rs`:
+Certifique-se de adicionar `resources` como um módulo em `lib.rs`:
 
 ```rust
 mod resources;
 ```
 
-## Loading models with TOBJ
+## Carregando modelos com TOBJ
 
-We're going to use the [tobj](https://docs.rs/tobj/3.0/tobj/) library to load our model. Let's add it to our `Cargo.toml`.
+Vamos usar a biblioteca [tobj](https://docs.rs/tobj/3.0/tobj/) para carregar nosso modelo. Vamos adicioná-la ao nosso `Cargo.toml`.
 
 ```toml
 [dependencies]
-# other dependencies...
+# outras dependências...
 tobj = { version = "3.2", default-features = false, features = ["async"]}
 ```
 
-Before we can load our model, though, we need somewhere to put it.
+Antes de podermos carregar nosso modelo, porém, precisamos de um lugar para armazená-lo.
 
 ```rust
 // model.rs
@@ -240,7 +240,7 @@ pub struct Model {
 }
 ```
 
-You'll notice that our `Model` struct has a `Vec` for the `meshes` and `materials`. This is important as our obj file can include multiple meshes and materials. We still need to create the `Mesh` and `Material` classes, so let's do that.
+Você notará que nossa struct `Model` possui um `Vec` para `meshes` e `materials`. Isso é importante porque nosso arquivo `.obj` pode incluir múltiplas malhas (meshes) e materiais. Ainda precisamos criar as estruturas `Mesh` e `Material`, então vamos fazer isso.
 
 ```rust
 pub struct Material {
@@ -258,9 +258,9 @@ pub struct Mesh {
 }
 ```
 
-The `Material` is pretty simple. It's just the name and one texture. Our cube obj actually has two textures, but one is a normal map, and we'll get to those [later](../../intermediate/tutorial11-normals). The name is more for debugging purposes.
+O `Material` é bem simples. É apenas o nome e uma textura. Nosso obj de cubo na verdade possui duas texturas, mas uma é um normal map, e abordaremos isso [mais tarde](../../intermediate/tutorial11-normals). O nome serve mais para fins de depuração.
 
-Speaking of textures, we'll need to add a function to load a `Texture` in `resources.rs`.
+Falando em texturas, precisaremos adicionar uma função para carregar uma `Texture` em `resources.rs`.
 
 ```rust
 
@@ -274,11 +274,11 @@ pub async fn load_texture(
 }
 ```
 
-The `load_texture` method will be useful when we load the textures for our models, as `include_bytes!` requires that we know the name of the file at compile time, which we can't really guarantee with model textures.
+O método `load_texture` será útil quando carregarmos as texturas para nossos modelos, pois `include_bytes!` exige que saibamos o nome do arquivo em tempo de compilação, o que não podemos garantir com texturas de modelos.
 
-`Mesh` holds a vertex buffer, an index buffer, and the number of indices in the mesh. We're using an `usize` for the material. This `usize` will index the `materials` list when it comes time to draw.
+`Mesh` contém um buffer de vértices, um buffer de índices e o número de índices na malha. Estamos usando um `usize` para o material. Esse `usize` indexará a lista `materials` quando chegar a hora de desenhar.
 
-With all that out of the way, we can get to loading our model.
+Com tudo isso resolvido, podemos ir para o carregamento do nosso modelo.
 
 ```rust
 pub async fn load_model(
@@ -386,12 +386,11 @@ pub async fn load_model(
 
     Ok(model::Model { meshes, materials })
 }
-
 ```
 
-## Rendering a mesh
+## Renderizando uma malha
 
-Before we can draw the model, we need to be able to draw an individual mesh. Let's create a trait called `DrawModel` and implement it for `RenderPass`.
+Antes de podermos desenhar o modelo, precisamos ser capazes de desenhar uma malha individual. Vamos criar uma trait chamada `DrawModel` e implementá-la para o `RenderPass`.
 
 ```rust
 // model.rs
@@ -423,9 +422,9 @@ where
 }
 ```
 
-We could have put these methods in an `impl Model`, but I felt it made more sense to have the `RenderPass` do all the rendering, as that's kind of its job. This does mean we have to import `DrawModel` when we go to render, though.
+Poderíamos ter colocado esses métodos em um `impl Model`, mas achei que fazia mais sentido deixar o `RenderPass` cuidar de toda a renderização, já que essa é meio que a função dele. No entanto, isso significa que temos que importar o `DrawModel` quando formos renderizar.
 
-When we removed `vertex_buffer`, etc., we also removed their render_pass setup.
+Quando removemos `vertex_buffer`, etc., também removemos a configuração no render_pass.
 
 ```rust
 // lib.rs
@@ -438,7 +437,7 @@ use model::DrawModel;
 render_pass.draw_mesh_instanced(&self.obj_model.meshes[0], 0..self.instances.len() as u32);
 ```
 
-Before that, though, we need to load the model and save it to `State`. Put the following in `State::new()`.
+Antes disso, porém, precisamos carregar o modelo e salvá-lo no `State`. Coloque o seguinte em `State::new()`.
 
 ```rust
 let obj_model =
@@ -447,7 +446,7 @@ let obj_model =
         .unwrap();
 ```
 
-Our new model is a bit bigger than our previous one, so we're gonna need to adjust the spacing on our instances a bit.
+Nosso novo modelo é um pouco maior que o anterior, então vamos precisar ajustar um pouco o espaçamento em nossas instâncias.
 
 ```rust
 const SPACE_BETWEEN: f32 = 3.0;
@@ -471,21 +470,21 @@ let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
 }).collect::<Vec<_>>();
 ```
 
-With all that done, you should get something like this.
+Com tudo isso feito, você deverá obter algo como isto.
 
 ![cubes.png](./cubes.png)
 
-## Using the correct textures
+## Usando as texturas corretas
 
-If you look at the texture files for our obj, you'll see that they don't match up to our obj. The texture we want to see is this one,
+Se você olhar para os arquivos de textura do nosso obj, verá que eles não correspondem ao nosso obj. A textura que queremos ver é esta,
 
 ![cube-diffuse.jpg](./cube-diffuse.jpg)
 
-but we're still getting our happy tree texture.
+mas ainda estamos obtendo nossa textura da árvore feliz.
 
-The reason for this is quite simple. Though we've created our textures, we haven't created a bind group to give to the `RenderPass`. We're still using our old `diffuse_bind_group`. If we want to change that, we need to use the bind group from our materials - the `bind_group` member of the `Material` struct.
+A razão para isso é bem simples. Embora tenhamos criado nossas texturas, não criamos um bind group para entregar ao `RenderPass`. Ainda estamos usando nosso antigo `diffuse_bind_group`. Se quisermos mudar isso, precisamos usar o bind group dos nossos materiais - o membro `bind_group` da struct `Material`.
 
-We're going to add a material parameter to `DrawModel`.
+Vamos adicionar um parâmetro de material ao `DrawModel`.
 
 ```rust
 pub trait DrawModel<'a> {
@@ -524,7 +523,7 @@ where
 }
 ```
 
-We need to change the render code to reflect this.
+Precisamos alterar o código de renderização para refletir isso.
 
 ```rust
 render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
@@ -536,13 +535,13 @@ let material = &self.obj_model.materials[mesh.material];
 render_pass.draw_mesh_instanced(mesh, material, 0..self.instances.len() as u32, &self.camera_bind_group);
 ```
 
-With all that in place, we should get the following.
+Com tudo isso no lugar, devemos obter o seguinte.
 
 ![cubes-correct.png](./cubes-correct.png)
 
-## Rendering the entire model
+## Renderizando o modelo inteiro
 
-Right now, we are specifying the mesh and the material directly. This is useful if we want to draw a mesh with a different material. We're also not rendering other parts of the model (if we had some). Let's create a method for `DrawModel` that will draw all the parts of the model with their respective materials.
+No momento, estamos especificando a malha e o material diretamente. Isso é útil se quisermos desenhar uma malha com um material diferente. Também não estamos renderizando outras partes do modelo (se tivéssemos algumas). Vamos criar um método para `DrawModel` que desenhará todas as partes do modelo com seus respectivos materiais.
 
 ```rust
 pub trait DrawModel<'a> {
@@ -578,7 +577,7 @@ where
 }
 ```
 
-The code in `lib.rs` will change accordingly.
+O código em `lib.rs` mudará de acordo.
 
 ```rust
 render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
@@ -586,7 +585,7 @@ render_pass.set_pipeline(&self.render_pipeline);
 render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32, &self.camera_bind_group);
 ```
 
-## Demo
+## Demonstração
 
 <WasmExample example="tutorial9_models"></WasmExample>
 

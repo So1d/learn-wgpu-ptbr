@@ -43,9 +43,9 @@ pub async fn run() -> anyhow::Result<()> {
 
     let mut encoder = device.create_command_encoder(&Default::default());
 
-    let num_items_per_workgroup = 128; // 64 threads, 2 items per thread
+    let num_items_per_workgroup = 128; // 64 threads, 2 itens por thread
     let num_dispatches = input_data.len().div_ceil(num_items_per_workgroup) as u32;
-    // We do 2 passes in the shader so we only need to do half the passes
+    // Realizamos 2 passos no shader, então só precisamos executar metade das iterações
     let num_passes = input_data.len().div_ceil(2);
 
     {
@@ -73,7 +73,7 @@ pub async fn run() -> anyhow::Result<()> {
         let output_data = temp_buffer.get_mapped_range(..)?;
         let u32_data = bytemuck::cast_slice::<_, u32>(&output_data);
 
-        // Confirm that the list is sorted
+        // Confirma que a lista está ordenada
         for i in 1..u32_data.len() {
             assert!(
                 u32_data[i] > u32_data[i - 1],

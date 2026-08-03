@@ -1,22 +1,22 @@
-# Working with Lights
+# Trabalhando com Luzes
 
-While we can tell our scene is 3D because of our camera, it still feels very flat. That's because our model stays the same color regardless of its orientation. If we want to change that, we need to add lighting to our scene.
+Embora possamos perceber que nossa cena é 3D por causa da nossa câmera, ela ainda parece muito plana. Isso acontece porque nosso modelo mantém a mesma cor, independentemente da sua orientação. Se quisermos mudar isso, precisamos adicionar iluminação à nossa cena.
 
-In the real world, a light source emits photons that bounce around until they enter our eyes. The color we see is the light's original color minus whatever energy it lost while bouncing around.
+No mundo real, uma fonte de luz emite fótons que rebatem até entrarem em nossos olhos. A cor que vemos é a cor original da luz menos qualquer energia que ela perdeu enquanto rebatia por aí.
 
-In the computer graphics world, modeling individual photons would be hilariously computationally expensive. A single 100 Watt light bulb emits about 3.27 x 10^20 photons *per second*. Just imagine that for the sun! To get around this, we're going to use math to cheat.
+No mundo da computação gráfica, modelar fótons individuais seria absurdamente custoso computacionalmente. Uma única lâmpada de 100 Watts emite cerca de 3,27 x 10^20 fótons *por segundo*. Imagine isso para o sol! Para contornar essa limitação, vamos usar matemática para "trapacear".
 
-Let's discuss a few options.
+Vamos discutir algumas opções.
 
 ## Ray/Path Tracing
 
-This is an *advanced* topic, and we won't be covering it in depth here. It's the closest model to the way light really works so I felt I had to mention it. Check out the [ray tracing tutorial](../../todo/) if you want to learn more.
+Este é um tópico *avançado*, e não o abordaremos em detalhes aqui. É o modelo mais próximo de como a luz realmente funciona, por isso achei importante mencioná-lo. Confira o [tutorial de ray tracing](../../todo/) se quiser saber mais.
 
-## The Blinn-Phong Model
+## O Modelo Blinn-Phong
 
-Ray/path tracing is often too computationally expensive for most real-time applications (though that is starting to change), so a more efficient, if less accurate method based on the [Phong reflection model](https://en.wikipedia.org/wiki/Phong_shading) is often used. It splits up the lighting calculation into three parts: ambient lighting, diffuse lighting, and specular lighting. We're going to be learning the [Blinn-Phong model](https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model), which cheats a bit at the specular calculation to speed things up.
+O Ray/Path Tracing geralmente é muito custoso computacionalmente para a maioria das aplicações em tempo real (embora isso esteja começando a mudar), por isso um método mais eficiente, embora menos preciso, baseado no [modelo de reflexão de Phong](https://pt.wikipedia.org/wiki/Sombra_Phong) é frequentemente usado. Ele divide o cálculo de iluminação em três partes: iluminação ambiente (ambient), iluminação difusa (diffuse) e iluminação especular (specular). Vamos aprender o [modelo Blinn-Phong](https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model), que trapaceia um pouco no cálculo especular para agilizar as coisas.
 
-Before we can get into that, though, we need to add a light to our scene.
+Antes de entrarmos nisso, porém, precisamos adicionar uma luz à nossa cena.
 
 ```rust
 // lib.rs
@@ -24,27 +24,27 @@ Before we can get into that, though, we need to add a light to our scene.
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightUniform {
     position: [f32; 3],
-    // Due to uniforms requiring 16 byte (4 float) spacing, we need to use a padding field here
+    // Devido aos uniforms exigirem espaçamento de 16 bytes (4 floats), precisamos usar um campo de padding aqui
     _padding: u32,
     color: [f32; 3],
-    // Due to uniforms requiring 16 byte (4 float) spacing, we need to use a padding field here
+    // Devido aos uniforms exigirem espaçamento de 16 bytes (4 floats), precisamos usar um campo de padding aqui
     _padding2: u32,
 }
 ```
 
-Our `LightUniform` represents a colored point in space. We're just going to use pure white light, but it's good to allow different colors of light.
+Nosso `LightUniform` representa um ponto colorido no espaço. Vamos usar apenas luz branca pura, mas é bom permitir cores de luz diferentes.
 
 
 <Note>
 
-The rule of thumb for alignment with WGSL structs is field alignments are always powers of 2. For example, a `vec3` may only have three float fields, giving it a size of 12. The alignment will be bumped up to the next power of 2 being 16. This means that you have to be more careful with how you layout your struct in Rust.
+A regra geral para alinhamento com structs WGSL é que os alinhamentos de campos são sempre potências de 2. Por exemplo, um `vec3` pode ter apenas três campos float, o que lhe dá um tamanho de 12. O alinhamento será elevado para a próxima potência de 2, que é 16. Isso significa que você precisa ter mais cuidado com a forma como organiza sua struct em Rust.
 
-Some developers choose to use `vec4`s instead of `vec3`s to avoid alignment
-issues. You can learn more about the alignment rules in the [WGSL spec](https://www.w3.org/TR/WGSL/#alignment-and-size)
+Alguns desenvolvedores optam por usar `vec4` em vez de `vec3` para evitar problemas de alinhamento.
+Você pode aprender mais sobre as regras de alinhamento na [especificação do WGSL](https://www.w3.org/TR/WGSL/#alignment-and-size).
 
 </Note>
 
-We're going to create another buffer to store our light in.
+Vamos criar outro buffer para armazenar nossa luz.
 
 ```rust
 let light_uniform = LightUniform {
@@ -54,7 +54,7 @@ let light_uniform = LightUniform {
     _padding2: 0,
 };
 
- // We'll want to update our lights position, so we use COPY_DST
+ // Vamos querer atualizar a posição das nossas luzes, por isso usamos COPY_DST
 let light_buffer = device.create_buffer_init(
     &wgpu::util::BufferInitDescriptor {
         label: Some("Light VB"),
@@ -65,7 +65,7 @@ let light_buffer = device.create_buffer_init(
 ```
 
 
-Don't forget to add the `light_uniform` and `light_buffer` to `State`. After that, we need to create a bind group layout and bind group for our light.
+Não se esqueça de adicionar o `light_uniform` e o `light_buffer` ao `State`. Depois disso, precisamos criar um bind group layout e um bind group para nossa luz.
 
 ```rust
 let light_bind_group_layout =
@@ -93,7 +93,7 @@ let light_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 });
 ```
 
-Add those to `State` and also update the `render_pipeline_layout`.
+Adicione-os ao `State` e também atualize o `render_pipeline_layout`.
 
 ```rust
 let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -105,10 +105,10 @@ let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayout
 });
 ```
 
-Let's also update the light's position in the `update()` method to see what our objects look like from different angles.
+Vamos também atualizar a posição da luz no método `update()` para ver como nossos objetos se parecem a partir de diferentes ângulos.
 
 ```rust
-// Update the light
+// Atualiza a luz
 let old_position: cgmath::Vector3<_> = self.light_uniform.position.into();
 self.light_uniform.position =
     (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0))
@@ -117,11 +117,11 @@ self.light_uniform.position =
 self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[self.light_uniform]));
 ```
 
-This will have the light rotate around the origin one degree every frame.
+Isso fará a luz rotacionar ao redor da origem um grau a cada frame.
 
-## Seeing the light
+## Enxergando a luz
 
-For debugging purposes, it would be nice if we could see where the light is to make sure that the scene looks correct. We could adapt our existing render pipeline to draw the light, but it will likely get in the way. Instead, we are going to extract our render pipeline creation code into a new function called `create_render_pipeline()`.
+Para fins de depuração (debugging), seria legal podermos ver onde a luz está para garantir que a cena parece correta. Poderíamos adaptar nosso pipeline de renderização existente para desenhar a luz, mas isso provavelmente atrapalharia. Em vez disso, vamos extrair nosso código de criação de pipeline de renderização para uma nova função chamada `create_render_pipeline()`.
 
 
 ```rust
@@ -162,11 +162,11 @@ fn create_render_pipeline(
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
             cull_mode: Some(wgpu::Face::Back),
-            // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+            // Definir isso para qualquer coisa além de Fill exige Features::NON_FILL_POLYGON_MODE
             polygon_mode: wgpu::PolygonMode::Fill,
-            // Requires Features::DEPTH_CLIP_CONTROL
+            // Exige Features::DEPTH_CLIP_CONTROL
             unclipped_depth: false,
-            // Requires Features::CONSERVATIVE_RASTERIZATION
+            // Exige Features::CONSERVATIVE_RASTERIZATION
             conservative: false,
         },
         depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
@@ -186,7 +186,7 @@ fn create_render_pipeline(
 }
 ```
 
-We also need to change `State::new()` to use this function.
+Também precisamos alterar `State::new()` para usar essa função.
 
 ```rust
 let render_pipeline = {
@@ -205,7 +205,7 @@ let render_pipeline = {
 };
 ```
 
-We're going to need to modify `model::DrawModel` to use our `light_bind_group`.
+Precisaremos modificar `model::DrawModel` para usar nosso `light_bind_group`.
 
 ```rust
 // model.rs
@@ -295,7 +295,7 @@ where
 }
 ```
 
-With that done, we can create another render pipeline for our light.
+Com isso feito, podemos criar outro pipeline de renderização para a nossa luz.
 
 ```rust
 // lib.rs
@@ -320,9 +320,9 @@ let light_render_pipeline = {
 };
 ```
 
-I chose to create a separate layout for the `light_render_pipeline`, as it doesn't need all the resources that the regular `render_pipeline` needs (mainly just the textures).
+Escolhi criar um layout separado para o `light_render_pipeline`, pois ele não precisa de todos os recursos que o `render_pipeline` comum necessita (principalmente as texturas).
 
-With that in place, we need to write the actual shaders.
+Com isso definido, precisamos escrever os shaders reais.
 
 ```wgsl
 // light.wgsl
@@ -369,7 +369,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 ```
 
-Now, we could manually implement the draw code for the light in `render()`, but to keep with the pattern we developed, let's create a new trait called `DrawLight`.
+Agora, poderíamos implementar manualmente o código de desenho da luz em `render()`, mas para manter o padrão que desenvolvemos, vamos criar uma nova trait chamada `DrawLight`.
 
 ```rust
 // model.rs
@@ -452,7 +452,7 @@ where
 }
 ```
 
-Finally, we want to add Light rendering to our render passes.
+Por fim, queremos adicionar a renderização da Luz aos nossos render passes.
 
 ```rust
 impl State {
@@ -461,33 +461,33 @@ impl State {
         // ...
         render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
-        use crate::model::DrawLight; // NEW!
-        render_pass.set_pipeline(&self.light_render_pipeline); // NEW!
+        use crate::model::DrawLight; // NOVO!
+        render_pass.set_pipeline(&self.light_render_pipeline); // NOVO!
         render_pass.draw_light_model(
             &self.obj_model,
             &self.camera_bind_group,
             &self.light_bind_group,
-        ); // NEW!
+        ); // NOVO!
 
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.draw_model_instanced(
             &self.obj_model,
             0..self.instances.len() as u32,
             &self.camera_bind_group,
-            &self.light_bind_group, // NEW
+            &self.light_bind_group, // NOVO
         );
 }
 ```
 
-With all that, we'll end up with something like this.
+Com tudo isso, terminaremos com algo assim.
 
 ![./light-in-scene.png](./light-in-scene.png)
 
-## Ambient Lighting
+## Iluminação Ambiente (Ambient)
 
-Light has a tendency to bounce around before entering our eyes. That's why you can see in areas that are in shadow. Modeling this interaction would be computationally expensive, so we will cheat. We define an ambient lighting value for the light bouncing off other parts of the scene to light our objects.
+A luz tem uma tendência a rebater por aí antes de entrar em nossos olhos. É por isso que você consegue ver em áreas que estão na sombra. Modelar essa interação seria computacionalmente custoso, por isso vamos trapacear. Definimos um valor de iluminação ambiente para a luz que rebate de outras partes da cena para iluminar nossos objetos.
 
-The ambient part is based on the light color and the object color. We've already added our `light_bind_group`, so we just need to use it in our shader. In `shader.wgsl`, add the following below the texture uniforms.
+A parte ambiente é baseada na cor da luz e na cor do objeto. Já adicionamos nosso `light_bind_group`, portanto só precisamos usá-lo em nosso shader. Em `shader.wgsl`, adicione o seguinte abaixo dos uniforms de textura.
 
 ```wgsl
 struct Light {
@@ -498,14 +498,14 @@ struct Light {
 var<uniform> light: Light;
 ```
 
-Then, we need to update our main shader code to calculate and use the ambient color value.
+Em seguida, precisamos atualizar o código principal do shader para calcular e usar o valor da cor ambiente.
 
 ```wgsl
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let object_color: vec4<f32> = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     
-    // We don't need (or want) much ambient light, so 0.1 is fine
+    // Não precisamos (nem queremos) muita luz ambiente, então 0.1 está ótimo
     let ambient_strength = 0.1;
     let ambient_color = light.color * ambient_strength;
 
@@ -515,29 +515,29 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 ```
 
-With that, we should get something like this.
+Com isso, devemos obter algo assim.
 
 ![./ambient_lighting.png](./ambient_lighting.png)
 
-## Diffuse Lighting
+## Iluminação Difusa (Diffuse)
 
-Remember the normal vectors that were included in our model? We're finally going to use them. Normals represent the direction a surface is facing. By comparing the normal of a fragment with a vector pointing to a light source, we get a value of how light/dark that fragment should be. We compare the vectors using the dot product to get the cosine of the angle between them.
+Lembra dos vetores normais que estavam incluídos em nosso modelo? Finalmente vamos usá-los. As normais representam a direção para a qual uma superfície está voltada. Comparando a normal de um fragmento com um vetor apontando para a fonte de luz, obtemos um valor de quão claro/escuro esse fragmento deve ser. Comparamos os vetores usando o produto escalar (dot product) para obter o cosseno do ângulo entre eles.
 
 ![./normal_diagram.png](./normal_diagram.png)
 
-If the dot product of the normal and light vector is 1.0, that means that the current fragment is directly in line with the light source and will receive the light's full intensity. A value of 0.0 or lower means that the surface is perpendicular or facing away from the light and, therefore, will be dark.
+Se o produto escalar da normal e do vetor de luz for 1.0, isso significa que o fragmento atual está diretamente alinhado com a fonte de luz e receberá a intensidade total da luz. Um valor de 0.0 ou inferior significa que a superfície é perpendicular ou está voltada de costas para a luz e, portanto, ficará escura.
 
-We're going to need to pull in the normal vector into our `shader.wgsl`.
+Vamos precisar trazer o vetor normal para o nosso `shader.wgsl`.
 
 ```wgsl
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
-    @location(2) normal: vec3<f32>, // NEW!
+    @location(2) normal: vec3<f32>, // NOVO!
 };
 ```
 
-We're also going to want to pass that value, as well as the vertex's position, to the fragment shader.
+Também vamos querer passar esse valor, bem como a posição do vértice, para o fragment shader.
 
 ```wgsl
 struct VertexOutput {
@@ -548,7 +548,7 @@ struct VertexOutput {
 };
 ```
 
-For now, let's just pass the normal directly as-is. This is wrong, but we'll fix it later.
+Por enquanto, vamos apenas passar a normal diretamente como ela é. Isso está incorreto, mas corrigiremos isso mais tarde.
 
 ```wgsl
 @vertex
@@ -572,7 +572,7 @@ fn vs_main(
 }
 ```
 
-With that, we can do the actual calculation. Add the following below the `ambient_color` calculation but above the `result`.
+Com isso, podemos fazer o cálculo real. Adicione o seguinte abaixo do cálculo de `ambient_color`, mas acima de `result`.
 
 ```wgsl
 let light_dir = normalize(light.position - in.world_position);
@@ -581,50 +581,50 @@ let diffuse_strength = max(dot(in.world_normal, light_dir), 0.0);
 let diffuse_color = light.color * diffuse_strength;
 ```
 
-Now we can include the `diffuse_color` in the `result`.
+Agora podemos incluir `diffuse_color` no `result`.
 
 ```wgsl
 let result = (ambient_color + diffuse_color) * object_color.xyz;
 ```
 
-With that, we get something like this.
+Com isso, obtemos algo assim.
 
 ![./ambient_diffuse_wrong.png](./ambient_diffuse_wrong.png)
 
-## The normal matrix
+## A Matriz de Normais (Normal Matrix)
 
-Remember when I said passing the vertex normal directly to the fragment shader was wrong? Let's explore that by removing all the cubes from the scene except one that will be rotated 180 degrees on the y-axis.
+Lembra quando eu disse que passar a normal do vértice diretamente para o fragment shader estava incorreto? Vamos explorar isso removendo todos os cubos da cena, exceto um que será rotacionado em 180 graus no eixo y.
 
 ```rust
 const NUM_INSTANCES_PER_ROW: u32 = 1;
 
-// In the loop, we create the instances in
+// No loop onde criamos as instâncias
 let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(180.0));
 ```
 
-We'll also remove the `ambient_color` from our lighting `result`.
+Também removeremos a `ambient_color` do nosso `result` de iluminação.
 
 ```wgsl
 let result = (diffuse_color) * object_color.xyz;
 ```
 
-That should give us something that looks like this.
+Isso deve nos dar algo parecido com isto.
 
 ![./diffuse_wrong.png](./diffuse_wrong.png)
 
-This is clearly wrong, as the light is illuminating the wrong side of the cube. This is because we aren't rotating our normals with our object, so no matter what direction the object faces, the normals will always face the same way.
+Isso está claramente errado, já que a luz está iluminando o lado errado do cubo. Isso ocorre porque não estamos rotacionando nossas normais com nosso objeto, então não importa em qual direção o objeto esteja voltado, as normais sempre estarão voltadas para a mesma direção.
 
 ![./normal_not_rotated.png](./normal_not_rotated.png)
 
-We need to use the model matrix to transform the normals to be in the right direction. We only want the rotation data, though. A normal represents a direction and should be a unit vector throughout the calculation. We can get our normals in the right direction using what is called a normal matrix.
+Precisamos usar a matriz de modelo (model matrix) para transformar as normais na direção correta. Queremos apenas os dados de rotação, no entanto. Uma normal representa uma direção e deve ser um vetor unitário durante todo o cálculo. Podemos colocar nossas normais na direção certa usando o que é chamado de matriz de normais (normal matrix).
 
-We could compute the normal matrix in the vertex shader, but that would involve inverting the `model_matrix`, and WGSL doesn't actually have an inverse function. We would have to code our own. On top of that, computing the inverse of a matrix is actually really expensive, especially doing that computation for every vertex.
+Poderíamos calcular a matriz de normais no vertex shader, mas isso envolveria inverter a `model_matrix`, e o WGSL não tem uma função de inversão integrada. Teríamos que codificar a nossa própria. Além disso, calcular a inversa de uma matriz é realmente custoso, especialmente fazer esse cálculo para cada vértice.
 
-Instead, we're going to add a `normal` matrix field to `InstanceRaw`. Instead of inverting the model matrix, we'll just use the instance's rotation to create a `Matrix3`.
+Em vez disso, vamos adicionar um campo de matriz `normal` em `InstanceRaw`. Em vez de inverter a matriz de modelo, vamos apenas usar a rotação da instância para criar uma `Matrix3`.
 
 <Note>
 
-We are using `Matrix3` instead of `Matrix4` as we only really need the rotation component of the matrix.
+Estamos usando `Matrix3` em vez de `Matrix4` pois precisamos realmente apenas do componente de rotação da matriz.
 
 </Note>
 
@@ -642,20 +642,20 @@ impl model::Vertex for InstanceRaw {
         use std::mem;
         wgpu::VertexBufferLayout {
             array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
-            // We need to switch from using a step mode of Vertex to Instance
-            // This means that our shaders will only change to use the next
-            // instance when the shader starts processing a new instance
+            // Precisamos mudar o step_mode de Vertex para Instance
+            // Isso significa que nossos shaders só avançarão para a próxima
+            // instância quando o shader começar a processar uma nova instância
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
                 wgpu::VertexAttribute {
                     offset: 0,
-                    // While our vertex shader only uses locations 0, and 1 now, in later tutorials, we'll
-                    // be using 2, 3, and 4 for Vertex. We'll start at slot 5 to not conflict with them later
+                    // Embora nosso vertex shader use apenas as locations 0 e 1 por enquanto, nos tutoriais futuros
+                    // usaremos 2, 3 e 4 para o Vertex. Começaremos no slot 5 para não ter conflito mais tarde
                     shader_location: 5,
                     format: wgpu::VertexFormat::Float32x4,
                 },
-                // A mat4 takes up 4 vertex slots as it is technically 4 vec4s. We need to define a slot
-                // for each vec4. We don't have to do this in code, though.
+                // Um mat4 ocupa 4 slots de vértices pois é tecnicamente 4 vec4s. Precisamos definir um slot
+                // para cada vec4. Mas não precisamos fazer isso no código.
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 6,
@@ -671,7 +671,7 @@ impl model::Vertex for InstanceRaw {
                     shader_location: 8,
                     format: wgpu::VertexFormat::Float32x4,
                 },
-                // NEW!
+                // NOVO!
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
                     shader_location: 9,
@@ -693,7 +693,7 @@ impl model::Vertex for InstanceRaw {
 }
 ```
 
-We need to modify `Instance` to create the normal matrix.
+Precisamos modificar `Instance` para criar a matriz de normais.
 
 ```rust
 struct Instance {
@@ -707,14 +707,14 @@ impl Instance {
             cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation);
         InstanceRaw {
             model: model.into(),
-            // NEW!
+            // NOVO!
             normal: cgmath::Matrix3::from(self.rotation).into(),
         }
     }
 }
 ```
 
-Now, we need to reconstruct the normal matrix in the vertex shader.
+Agora, precisamos reconstruir a matriz de normais no vertex shader.
 
 ```wgsl
 struct InstanceInput {
@@ -722,7 +722,7 @@ struct InstanceInput {
     @location(6) model_matrix_1: vec4<f32>,
     @location(7) model_matrix_2: vec4<f32>,
     @location(8) model_matrix_3: vec4<f32>,
-    // NEW!
+    // NOVO!
     @location(9) normal_matrix_0: vec3<f32>,
     @location(10) normal_matrix_1: vec3<f32>,
     @location(11) normal_matrix_2: vec3<f32>,
@@ -746,7 +746,7 @@ fn vs_main(
         instance.model_matrix_2,
         instance.model_matrix_3,
     );
-    // NEW!
+    // NOVO!
     let normal_matrix = mat3x3<f32>(
         instance.normal_matrix_0,
         instance.normal_matrix_1,
@@ -754,7 +754,7 @@ fn vs_main(
     );
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.world_normal = normal_matrix * model.normal; // UPDATED!
+    out.world_normal = normal_matrix * model.normal; // ATUALIZADO!
     var world_position: vec4<f32> = model_matrix * vec4<f32>(model.position, 1.0);
     out.world_position = world_position.xyz;
     out.clip_position = camera.view_proj * world_position;
@@ -764,43 +764,43 @@ fn vs_main(
 
 <Note>
 
-I'm currently doing things in [world space](https://gamedev.stackexchange.com/questions/65783/what-are-world-space-and-eye-space-in-game-development). Doing things in view-space, also known as eye-space, is more standard as objects can have lighting issues when they are further away from the origin. If we wanted to use view-space, we would have included the rotation due to the view matrix as well. We'd also have to transform our light's position using something like `view_matrix * model_matrix * light_position` to keep the calculation from getting messed up when the camera moves.
+No momento estou fazendo as coisas no [espaço do mundo (world space)](https://gamedev.stackexchange.com/questions/65783/what-are-world-space-and-eye-space-in-game-development). Fazer as coisas no espaço da câmera/visão (view-space ou eye-space) é o mais padrão, já que os objetos podem ter problemas de iluminação quando estão mais distantes da origem. Se quiséssemos usar o view-space, teríamos incluído também a rotação da matriz de visão (view matrix). Também teríamos que transformar a posição da nossa luz usando algo como `view_matrix * model_matrix * light_position` para evitar que o cálculo seja prejudicado quando a câmera se move.
 
-There are advantages to using view space. The main one is that when you have massive worlds doing lighting and other calculations in model spacing, it can cause issues as floating-point precision degrades when numbers get really large. View space keeps the camera at the origin meaning all calculations will be using smaller numbers. The actual lighting math ends up the same, but it does require a bit more setup.
+Existem vantagens em usar o view space. A principal é que, quando você tem mundos gigantescos fazendo iluminação e outros cálculos no espaço do modelo, isso pode causar problemas à medida que a precisão de ponto flutuante se degrada quando os números ficam muito grandes. O view space mantém a câmera na origem, o que significa que todos os cálculos usarão números menores. A matemática de iluminação em si permanece a mesma, mas exige um pouco mais de configuração.
 
 </Note>
 
-With that change, our lighting now looks correct.
+Com essa alteração, nossa iluminação agora parece correta.
 
 ![./diffuse_right.png](./diffuse_right.png)
 
-Bringing back our other objects and adding the ambient lighting gives us this.
+Trazendo de volta nossos outros objetos e adicionando a iluminação ambiente temos isto.
 
 ![./ambient_diffuse_lighting.png](./ambient_diffuse_lighting.png);
 
 <Note>
 
-If you can guarantee that your model matrix will always apply uniform scaling to your objects, you can get away with just using the model matrix. Github user @julhe shared this code with me that does the trick:
+Se você puder garantir que sua matriz de modelo sempre aplicará um dimensionamento (scaling) uniforme aos seus objetos, você pode usar apenas a matriz de modelo. O usuário do Github @julhe compartilhou comigo este código que resolve o problema:
 
 ```wgsl
 out.world_normal = (model_matrix * vec4<f32>(model.normal, 0.0)).xyz;
 ```
 
-This works by exploiting the fact that by multiplying a 4x4 matrix by a vector with 0 in the w component, only the rotation and scaling will be applied to the vector. You'll need to normalize this vector, though, as normals need to be unit length for the calculations to work.
+Isso funciona explorando o fato de que ao multiplicar uma matriz 4x4 por um vetor com 0 no componente w, apenas a rotação e a escala serão aplicadas ao vetor. Você precisará normalizar esse vetor, no entanto, pois as normais precisam ser de comprimento unitário para que os cálculos funcionem.
 
-The scaling factor *needs* to be uniform in order for this to work. If it's not, the resulting normal will be skewed, as you can see in the following image.
+O fator de escala *precisa* ser uniforme para que isso funcione. Caso contrário, a normal resultante ficará distorcida, como você pode ver na imagem a seguir.
 
 ![./normal-scale-issue.png](./normal-scale-issue.png)
 
 </Note>
 
-## Specular Lighting
+## Iluminação Especular (Specular)
 
-Specular lighting describes the highlights that appear on objects when viewed from certain angles. If you've ever looked at a car, it's the super bright parts. Basically, some of the light can reflect off the surface like a mirror. The location of the highlight shifts depending on what angle you view it at.
+A iluminação especular descreve os destaques (highlights/brilhos) que aparecem nos objetos quando vistos de determinados ângulos. Se você já olhou para um carro, são aquelas partes super brilhantes. Basicamente, parte da luz pode refletir na superfície como um espelho. A localização do destaque muda dependendo do ângulo pelo qual você o observa.
 
 ![./specular_diagram.png](./specular_diagram.png)
 
-Because this is relative to the view angle, we are going to need to pass in the camera's position both into the fragment shader and into the vertex shader.
+Como isso é relativo ao ângulo de visão, precisaremos passar a posição da câmera tanto para o fragment shader quanto para o vertex shader.
 
 ```wgsl
 struct Camera {
@@ -813,11 +813,11 @@ var<uniform> camera: Camera;
 
 <Note>
 
-Don't forget to update the `Camera` struct in `light.wgsl` as well, as if it doesn't match the `CameraUniform` struct in rust, the light will render wrong.
+Não se esqueça de atualizar a struct `Camera` em `light.wgsl` também, pois se ela não corresponder à struct `CameraUniform` em Rust, a luz será renderizada incorretamente.
 
 </Note>
 
-We're going to need to update the `CameraUniform` struct as well.
+Precisaremos atualizar a struct `CameraUniform` também.
 
 ```rust
 // lib.rs
@@ -837,14 +837,14 @@ impl CameraUniform {
     }
 
     fn update_view_proj(&mut self, camera: &Camera) {
-        // We're using Vector4 because of the uniforms 16 byte spacing requirement
+        // Estamos usando Vector4 por causa do requisito de espaçamento de 16 bytes do uniform
         self.view_position = camera.eye.to_homogeneous().into();
         self.view_proj = (OPENGL_TO_WGPU_MATRIX * camera.build_view_projection_matrix()).into();
     }
 }
 ```
 
-Since we want to use our uniforms in the fragment shader now, we need to change its visibility.
+Como queremos usar nossos uniforms no fragment shader agora, precisamos alterar sua visibilidade.
 
 ```rust
 // lib.rs
@@ -852,7 +852,7 @@ let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupL
     entries: &[
         wgpu::BindGroupLayoutBinding {
             // ...
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT, // Updated!
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT, // Atualizado!
             // ...
         },
         // ...
@@ -861,39 +861,39 @@ let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupL
 });
 ```
 
-We're going to get the direction from the fragment's position to the camera and use that with the normal to calculate the `reflect_dir`.
+Vamos obter a direção da posição do fragmento até a câmera e usar isso com a normal para calcular a `reflect_dir`.
 
 ```wgsl
 // shader.wgsl
-// In the fragment shader...
+// No fragment shader...
 let view_dir = normalize(camera.view_pos.xyz - in.world_position);
 let reflect_dir = reflect(-light_dir, in.world_normal);
 ```
 
-Then, we use the dot product to calculate the `specular_strength` and use that to compute the `specular_color`.
+Em seguida, usamos o produto escalar para calcular `specular_strength` e usamos isso para calcular `specular_color`.
 
 ```wgsl
 let specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
 let specular_color = specular_strength * light.color;
 ```
 
-Finally, we add that to the result.
+Por fim, adicionamos isso ao resultado.
 
 ```wgsl
 let result = (ambient_color + diffuse_color + specular_color) * object_color.xyz;
 ```
 
-With that, you should have something like this.
+Com isso, você deve ter algo parecido com isto.
 
 ![./ambient_diffuse_specular_lighting.png](./ambient_diffuse_specular_lighting.png)
 
-If we just look at the `specular_color` on its own, we get this.
+Se olharmos apenas para `specular_color` isoladamente, obtemos isto.
 
 ![./specular_lighting.png](./specular_lighting.png)
 
-## The half direction
+## A direção intermediária (Half Direction)
 
-Up to this point, we've actually only implemented the Phong part of Blinn-Phong. The Phong reflection model works well, but it can break down under [certain circumstances](https://learnopengl.com/Advanced-Lighting/Advanced-Lighting). The Blinn part of Blinn-Phong comes from the realization that if you add the `view_dir` and `light_dir` together, normalize the result and use the dot product of that and the `normal`, you get roughly the same results without the issues that using `reflect_dir` had.
+Até este ponto, implementamos apenas a parte Phong do Blinn-Phong. O modelo de reflexão de Phong funciona bem, mas pode falhar em [certas circunstâncias](https://learnopengl.com/Advanced-Lighting/Advanced-Lighting). A parte Blinn de Blinn-Phong vem da percepção de que se você somar `view_dir` e `light_dir`, normalizar o resultado e usar o produto escalar disso com a `normal`, você obterá aproximadamente os mesmos resultados sem os problemas que o uso de `reflect_dir` causava.
 
 ```wgsl
 let view_dir = normalize(camera.view_pos.xyz - in.world_position);
@@ -902,11 +902,11 @@ let half_dir = normalize(view_dir + light_dir);
 let specular_strength = pow(max(dot(in.world_normal, half_dir), 0.0), 32.0);
 ```
 
-It's hard to tell the difference, but here are the results.
+É difícil notar a diferença, mas aqui estão os resultados.
 
 ![./half_dir.png](./half_dir.png)
 
-## Demo
+## Demonstração
 
 <WasmExample example="tutorial10_lighting"></WasmExample>
 

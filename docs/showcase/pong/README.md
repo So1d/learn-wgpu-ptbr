@@ -1,25 +1,22 @@
 # Pong
 
-![A screenshot of pong](./pong.png)
+![Screenshot do jogo Pong](./pong.png)
 
 <Note class="warning">
 
-This example is not working as of `wgpu = "28.0"`. If the crate updates to
-the latest version I'll switch it over, but given that the crate maintainer
-is directing users to use [glypon](https://github.com/grovesNL/glyphon?tab=readme-ov-file)
-I'm considering either switching to using that, or writing my own text code.
+Este exemplo não está funcionando a partir do `wgpu = "28.0"`. Se o crate atualizar para a versão mais recente, eu atualizarei o código, mas como o mantenedor do crate está direcionando os usuários para usar o [glyphon](https://github.com/grovesNL/glyphon?tab=readme-ov-file), estou considerando migrar para ele ou escrever meu próprio código de renderização de texto.
 
 </Note>
 
-Practically the "Hello World!" of games. Pong has been remade thousands of times. I know Pong. You know Pong. We all know Pong. That being said, this time I wanted to put in a little more effort than most people do. This showcase has a basic menu system, sounds, and different game states.
+Praticamente o "Hello World!" do desenvolvimento de jogos. Pong foi recriado milhares de vezes. Eu conheço o Pong, você conhece o Pong, todos conhecemos o Pong. Dito isso, desta vez eu quis colocar um pouco mais de esforço do que a maioria das pessoas costuma colocar. Esta demonstração (showcase) inclui um sistema de menu básico, efeitos sonoros e diferentes estados de jogo.
 
-The architecture is not the best as I prescribed to the "get things done" mentality. If I were to redo this project, I'd change a lot of things. Regardless, let's get into the postmortem.
+A arquitetura não é perfeita, pois segui a mentalidade de "fazer funcionar". Se eu fosse refazer este projeto, mudaria muitas coisas. De qualquer forma, vamos à análise pós-morte (postmortem).
 
-## The Architecture
+## A Arquitetura
 
-I was messing around with separating state from the render code. It ended up similar to an Entity Component System model.
+Estava experimentando separar o estado da lógica de renderização. O resultado final ficou semelhante a um modelo de Entity Component System (ECS).
 
-I had a `State` class with all of the objects in the scene. This included the ball and the paddles, as well as the text for the scores and even the menu. `State` also included a `game_state` field of type `GameState`.
+Criei uma struct `State` com todos os objetos da cena. Isso incluiu a bola e as raquetes, bem como os textos para a pontuação e até o menu. `State` também inclui um campo `game_state` do tipo `GameState`.
 
 ```rust
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -32,7 +29,7 @@ pub enum GameState {
 }
 ```
 
-The `State` class didn't have any methods on it as I was taking a more data-oriented approach. Instead, I created a `System` trait and created multiple structs that implemented it.
+A struct `State` não possui métodos próprios, pois adotei uma abordagem orientada a dados. Em vez disso, criei uma trait `System` e implementei várias structs que a implementam.
 
 ```rust
 pub trait System {
@@ -47,7 +44,7 @@ pub trait System {
 }
 ```
 
-The systems would be in charge of controlling updating the different objects' states (position, visibility, etc), as well as updating the `game_state` field. I created all the systems on startup and used a `match` on `game_state` to determine which ones should be allowed to run (the `visiblity_system` always runs as it is always needed).
+Os sistemas são responsáveis por controlar e atualizar o estado dos diferentes objetos (posição, visibilidade, etc.), além de atualizar o campo `game_state`. Criei todos os sistemas na inicialização e usei um `match` em `game_state` para determinar quais deveriam ser executados em cada momento (o `visiblity_system` sempre é executado, pois é necessário em todos os estados).
 
 ```rust
 visiblity_system.update_state(&input, &mut state, &mut events);
@@ -84,27 +81,27 @@ match state.game_state {
 }
 ```
 
-It's definitely not the cleanest code, but it works.
+Definitivamente não é o código mais limpo, mas funciona.
 
-I ended up having 6 systems in total.
+Acabei tendo 6 sistemas no total:
 
-1. I added the `VisibilitySystem` near the end of development. Up to that point, all the systems had to set the `visible` field of the objects. That was a pain and cluttered the logic. Instead, I decided to create the `VisiblitySystem` to handle that.
+1. Adicionei o `VisibilitySystem` perto do fim do desenvolvimento. Até aquele momento, todos os sistemas tinham que definir o campo `visible` dos objetos. Isso era entediante e poluía a lógica. Então decidi criar o `VisibilitySystem` para tratar disso.
 
-2. The `MenuSystem` handled controlling what text was focused, and what would happen when the user pressed the enter key. If the `Play` button was focused, pressing enter would change `game_state` to `GameState::Serving` which would start the game. The `Quit` button would shift to `GameState::Quiting`.
+2. O `MenuSystem` controlava qual texto do menu estava em foco e o que acontecia quando o usuário pressionava a tecla Enter. Se o botão `Play` estivesse em foco, pressionar Enter mudava o `game_state` para `GameState::Serving`, iniciando o jogo. O botão `Quit` alternava para `GameState::Quiting`.
 
-3. The `ServingSystem` sets the ball's position to `(0.0, 0.0)`, updates the score texts, and shifts into `GameState::Playing` after a timer.
+3. O `ServingSystem` define a posição da bola em `(0.0, 0.0)`, atualiza os textos de pontuação e altera para `GameState::Playing` após um temporizador.
 
-4. The `PlaySystem` controls the players. It allows them to move and keeps them from leaving the play space. This system runs on both `GameState::Playing` as well as `GameState::Serving`. I did this to allow the players to reposition themselves before the serve. The `PlaySystem` also will shift into `GameState::GameOver` when one of the players' scores is greater than 2.
+4. O `PlaySystem` controla os jogadores. Permite que eles se movam e os impede de sair do espaço de jogo. Este sistema roda tanto em `GameState::Playing` quanto em `GameState::Serving`. Fiz isso para permitir que os jogadores se reposicionem antes do saque. O `PlaySystem` também altera para `GameState::GameOver` quando a pontuação de um dos jogadores é maior que 2.
 
-5. The `BallSystem` system controls the ball's movement as well as its bouncing of walls/players. It also updates the score and shifts to `GameState::Serving` when the ball goes off the side of the screen.
+5. O `BallSystem` controla o movimento da bola, bem como suas colisões/quiques nas paredes e jogadores. Ele também atualiza a pontuação e muda para `GameState::Serving` quando a bola sai pela lateral da tela.
 
-6. The `GameOver` system updates the `win_text` and shifts to `GameState::MainMenu` after a delay.
+6. O `GameOver` system atualiza o `win_text` e muda para `GameState::MainMenu` após um atraso.
 
-I found the system approach quite nice to work with. My implementation wasn't the best, but I would like to work with it again. I might even implement my own ECS.
+Achei a abordagem baseada em sistemas bastante agradável de trabalhar. Minha implementação não foi a melhor, mas gostaria de trabalhar com isso novamente no futuro. Talvez eu até implemente meu próprio ECS.
 
-## Input
+## Entrada de Dados (Input)
 
-The `System` trait, originally had a `process_input` method. This became a problem when I was implementing allowing players to move between serves. The players would get stuck when the `game_state` switched from `Serving` to `Playing` as the inputs were getting stuck. I only called `process_input` on systems that were currently in use.  Changing that would be finicky, so I decided to move all the input code into its own struct.
+A trait `System` originalmente possuía um método `process_input`. Isso se tornou um problema quando estava implementando a movimentação dos jogadores entre os saques. Os jogadores ficavam travados quando o `game_state` alternava de `Serving` para `Playing` porque as entradas de dados ficavam presas. Eu só chamava `process_input` em sistemas que estavam ativos no momento. Alterar isso seria delicado, então decidi mover todo o código de input para sua própria struct.
 
 ```rust
 use winit::event::{VirtualKeyCode, ElementState};
@@ -160,13 +157,13 @@ impl Input {
 }
 ```
 
-This works really well. I simply pass this struct into the `update_state` method.
+Isso funciona muito bem. Eu simplesmente passo essa struct no método `update_state`.
 
-## Render
+## Renderização (Render)
 
-I used [wgpu_glyph](https://docs.rs/wgpu_glyph) for the text and white quads for the ball and paddles. There's not much to say here, it's Pong after all.
+Usei [wgpu_glyph](https://docs.rs/wgpu_glyph) para os textos e quads brancos para a bola e as raquetes. Não há muito o que comentar aqui, é Pong afinal.
 
-I did mess around with batching, however. It was totally overkill for this project, but it was a good learning experience. Here's the code if you're interested.
+No entanto, experimentei usar batching (agrupamento de chamadas de desenho). Foi totalmente exagerado para este projeto, mas foi uma boa experiência de aprendizado. Aqui está o código se tiver interesse:
 
 ```rust
 pub struct QuadBufferBuilder {
@@ -247,9 +244,9 @@ impl QuadBufferBuilder {
 }
 ```
 
-## Sound
+## Som
 
-I used [rodio](https://docs.rs/rodio) for sound. I created a `SoundPack` class to store the sounds. Deciding how to get the sounds to play took some thinking. I chose to pass in a `Vec<state::Event>` into the `update_state` method. The system would then push an event to the `Vec`. The `Event` enum is listed below.
+Usei [rodio](https://docs.rs/rodio) para o áudio. Criei uma struct `SoundPack` para armazenar os sons. Decidir como reproduzir os sons exigiu alguma reflexão. Optei por passar um `Vec<state::Event>` no método `update_state`. O sistema insere um evento no `Vec`. O enum `Event` é exibido abaixo.
 
 ```rust
 #[derive(Debug, Copy, Clone)]
@@ -261,15 +258,16 @@ pub enum Event {
 }
 ```
 
-I was going to have `BallBounce` play a positioned sound using a `SpatialSink`, but I was getting clipping issues, and I wanted to be done with the project. Aside from that, the events system worked nicely.
+Eu pretendia fazer o `BallBounce` reproduzir um som posicionado no espaço usando `SpatialSink`, mas enfrentei problemas de clipping (corte de áudio) e queria concluir o projeto. Fora isso, o sistema de eventos funcionou muito bem.
 
-## WASM Support
+## Suporte a WASM
 
-This example works on the web, but there are a few steps that I needed to take to make things work. The first one was that I needed to switch to using a `lib.rs` instead of just `main.rs`. I opted to use [wasm-pack](https://rustwasm.github.io/wasm-pack/) to create the web assembly. I could have kept the old format by using wasm-bindgen directly, but I ran into issues with using the wrong version of wasm-bindgen, so I elected to stick with wasm-pack.
+Este exemplo funciona na web, mas houve alguns passos necessários para fazer tudo funcionar. O primeiro foi alternar para um `lib.rs` em vez de utilizar apenas `main.rs`. Optei por usar [wasm-pack](https://rustwasm.github.io/wasm-pack/) para gerar o WebAssembly. Eu poderia ter mantido o formato anterior usando wasm-bindgen diretamente, mas enfrentei conflitos de versão do wasm-bindgen, então decidi optar pelo wasm-pack.
 
-In order for wasm-pack to work properly I first needed to add some dependencies:
+Para que o wasm-pack funcione corretamente, primeiro precisei adicionar algumas dependências:
 
-```toml[dependencies]
+```toml
+[dependencies]
 anyhow = "1.0"
 env_logger = "0.10"
 winit = { version = "0.30", features = ["android-native-activity"] }
@@ -304,20 +302,19 @@ fs_extra = "1.2"
 glob = "0.3"
 rayon = "1.4"
 naga = { version = "28.0", features = ["glsl-in", "spv-out", "wgsl-out"]}
-
 ```
 
-I'll highlight a few of these:
+Destaco algumas delas:
 
-- rand: If you want to use rand on the web, you need to include getrandom directly and enable its `js` feature.
-- rodio: I had to disable all of the features for the WASM build, and then enabled them separately. The `mp3` feature specifically wasn't working for me. There might have been a workaround, but since I'm not using mp3 in this example I just elected to only use wav.
-- instant: This crate is basically just a wrapper around `std::time::Instant`. In a normal build, it's just a type alias. In web builds it uses the browser's time functions.
-- cfg-if: This is a convenient crate for making platform-specific code less horrible to write.
-- env_logger and console_log: env_logger doesn't work on web assembly so we need to use a different logger. console_log is the one used in the web assembly tutorials, so I went with that one.
-- wasm-bindgen: This crate is the glue that makes Rust code work on the web. If you are building using the wasm-bindgen command you need to make sure that the command version of wasm-bindgen matches the version in Cargo.toml **exactly** otherwise you'll have problems. If you use wasm-pack it will download the appropriate wasm-bindgen binary to use for your crate.
-- web-sys: This has functions and types that allow you to use different methods available in js such as "getElementById()".
+- rand: Se quiser usar rand na web, você precisa incluir getrandom diretamente e habilitar sua feature `js`.
+- rodio: Tive que desativar todas as features para a compilação WASM e depois reabilitá-las separadamente. A feature `mp3` especificamente não estava funcionando. Poderia haver uma solução alternativa, mas como não utilizo mp3 neste exemplo, optei por usar apenas wav.
+- instant: Este crate é basicamente um wrapper em torno de `std::time::Instant`. Em uma compilação nativa, é apenas um alias de tipo. Em compilações para web, ele usa as funções de tempo do navegador.
+- cfg-if: Um crate conveniente para tornar código específico de plataforma menos incômodo de escrever.
+- env_logger e console_log: O env_logger não funciona em WebAssembly, por isso precisamos usar um logger diferente. O console_log é o utilizado nos tutoriais de WebAssembly, então optei por ele.
+- wasm-bindgen: Este crate é a ponte que faz o código Rust funcionar na web. Se você estiver compilando usando o comando wasm-bindgen, certifique-se de que a versão da ferramenta corresponda **exatamente** à versão no Cargo.toml, caso contrário enfrentará erros. Se usar wasm-pack, ele baixará o binário do wasm-bindgen apropriado para o seu crate.
+- web-sys: Contém funções e tipos que permitem usar métodos disponíveis em JS, tais como "getElementById()".
 
-Now that that's out of the way let's talk about some code. First, we need to create a function that will start our event loop.
+Agora que esclarecemos isso, vamos falar de código. Primeiro, precisamos criar uma função que iniciará nosso event loop.
 
 ```rust
 #[cfg(target_arch="wasm32")]
@@ -325,16 +322,16 @@ use wasm_bindgen::prelude::*;
 
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub fn start() {
-    // Snipped...
+    // Omitting...
 }
 ```
 
-The `wasm_bindgen(start)` tell's wasm-bindgen that this function should be started as soon as the web assembly module is loaded by javascript. Most of the code inside this function is the same as what you'd find in other examples on this site, but there is some specific stuff we need to do on the web.
+O `wasm_bindgen(start)` indica ao wasm-bindgen que esta função deve ser executada assim que o módulo WebAssembly for carregado pelo JavaScript. A maior parte do código dentro desta função é semelhante ao encontrado em outros exemplos deste site, mas há coisas específicas que precisamos fazer na web.
 
 ```rust
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
-        console_log::init_with_level(log::Level::Warn).expect("Could't initialize logger");
+        console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     } else {
         env_logger::init();
@@ -342,9 +339,9 @@ cfg_if::cfg_if! {
 }
 ```
 
-This code should run before you try to do anything significant. It sets up the logger based on what architecture you're building for. Most architectures will use `env_logger`. The `wasm32` architecture will use `console_log`. It's also important that we tell Rust to forward panics to javascript. If we didn't do this we would have no idea when our Rust code panics.
+Este código deve ser executado antes de qualquer outra tarefa significativa. Ele configura o logger com base na arquitetura alvo da compilação. A maioria das arquiteturas usará `env_logger`. A arquitetura `wasm32` usará `console_log`. Também é importante instruir o Rust a redirecionar panics para o JavaScript. Se não fizéssemos isso, não teríamos como saber quando nosso código Rust entra em panic.
 
-Next, we create a window. Much of it is like we've done before, but since we are supporting fullscreen we need to do some extra steps.
+Em seguida, criamos uma janela. A maior parte é como fizemos antes, mas como suportamos tela cheia, precisamos de algumas etapas extras:
 
 ```rust
 let event_loop = EventLoop::new();
@@ -358,14 +355,14 @@ let window = WindowBuilder::new()
     .build(&event_loop)
     .unwrap();
 
-// WASM builds don't have access to monitor information, so
-// we should specify a fallback resolution
+// Compilações WASM não têm acesso às informações do monitor, então
+// devemos especificar uma resolução de fallback
 if window.fullscreen().is_none() {
     window.set_inner_size(PhysicalSize::new(512, 512));
 }
 ```
 
-We then have to do some web-specific stuff if we are on that platform.
+Em seguida, realizamos alguns passos específicos de web caso estejamos nessa plataforma:
 
 ```rust
 #[cfg(target_arch = "wasm32")]
@@ -378,7 +375,7 @@ We then have to do some web-specific stuff if we are on that platform.
             let canvas = web_sys::Element::from(window.canvas()?);
             dst.append_child(&canvas).ok()?;
 
-            // Request fullscreen, if denied, continue as normal
+            // Solicita tela cheia; se negado, continua normalmente
             match canvas.request_fullscreen() {
                 Ok(_) => {},
                 Err(_) => ()
@@ -390,12 +387,12 @@ We then have to do some web-specific stuff if we are on that platform.
 }
 ```
 
-Everything else works the same.
+Todo o restante funciona da mesma maneira.
 
-## Summary
+## Resumo
 
-A fun project to work on. It was overly architected, and kinda hard to make changes, but a good experience nonetheless.
+Um projeto divertido de desenvolver. Foi ultra-arquitetado e um pouco difícil de realizar alterações, mas ainda assim uma ótima experiência de aprendizado.
 
-<!-- Try the code down below! (Controls currently require a keyboard.)
+<!-- Experimente o código abaixo! (Controles atualmente requerem teclado.)
 
 <WasmExample example="pong"></WasmExample> -->
