@@ -1,12 +1,12 @@
-> [!NOTE]
-> **Fork de Tradução para Português Brasileiro (PT-BR)**
-> 
-> Este repositório é um *fork* não-oficial para estudo pessoal do projeto [learn-wgpu](https://github.com/sotrh/learn-wgpu) por [@sotrh](https://github.com/sotrh).
-> Todo o conteúdo da documentação e os comentários do código Rust foram traduzidos para **Português Brasileiro (PT-BR)** utilizando Inteligência Artificial (IA).
-> 
-> ⚠️ **Aviso**: Por ser uma tradução automática feita via IA para apoio aos estudos, o texto pode conter erros pontuais, imprecisões ou palavras mal traduzidas. Para a versão oficial em inglês, acesse o [repositório original sotrh/learn-wgpu](https://github.com/sotrh/learn-wgpu).
-
 # Introdução
+
+<Note :hidden="false">
+
+**Fork de Tradução para Português Brasileiro (PT-BR)**
+
+Este repositório é um *fork* de estudo pessoal do projeto oficial [learn-wgpu](https://github.com/sotrh/learn-wgpu) criado por [@sotrh](https://github.com/sotrh). Todo o conteúdo foi traduzido para Português Brasileiro (PT-BR) utilizando Inteligência Artificial (IA).
+
+</Note>
 
 ## O que é o wgpu?
 
