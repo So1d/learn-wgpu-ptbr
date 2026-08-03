@@ -6,7 +6,7 @@ import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 
 export default defineUserConfig({
-  base: "/learn-wgpu/",
+  base: "/learn-wgpu-ptbr/",
   title: "Aprenda Wgpu",
   public: "res",
   bundler: viteBundler({
