@@ -15,6 +15,7 @@ export default defineUserConfig({
     },
   }),
   theme: defaultTheme({
+    sidebar: false,
     navbar: [
       {
         text: "Início",
