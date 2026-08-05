@@ -1,4 +1,4 @@
-# Learn WGPU - Tradução PT-BR (Fork de Estudo)
+# Learn WGPU - Tradução PT-BR 
 
 [![Aprenda Wgpu](https://img.shields.io/badge/Documenta%C3%A7%C3%A3o-PT--BR-blue.svg)](./docs/README.md)
 
